@@ -59,10 +59,6 @@ def pretty_display_board(board):
     print("   ----------------")
     print("   a b c d e f g h")
     
-def index_to_square(index):
-    ''''''
-
-
 def square_to_index(square):
     ''''''
     validate_square(square) 
@@ -73,7 +69,7 @@ def square_to_index(square):
     return rank * 8 + file
 
 def index_to_square(index):
-    
+    ''''''
     if not 0 <= index < 64:
         raise ValueError("Index must be an integer between '0' and '64'")
     
@@ -99,8 +95,6 @@ if __name__ == "__main__":
     print(square_to_index(square))
     print(index_to_square(square_to_index(square)))
     print("")
-    
-    quit()
     
     board = create_starting_position()
 
