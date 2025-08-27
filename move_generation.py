@@ -28,12 +28,23 @@ def generate_pawn_move(board, square):
                 available_squares.append(sqr2)
 
     # ------ PAWN CAPTURES ------ #
-    if color == 'w':
-        capturable_squares = [f"{chr(ord(file) + 1)}{rank + 1}", f"{chr(ord(file) - 1)}{rank + 1}"]
+    c = ord(file)
+    files = []
 
-    else:
-        capturable_squares = [f"{chr(ord(file) + 1)}{rank - 1}", f"{chr(ord(file) - 1)}{rank - 1}"]
+    if c != ord('h'):
+        files.append(chr(c + 1))
 
+    if c != ord('a'):
+        files.append(chr(c - 1))
+     
+    rank_capture = rank + 1 if color == 'w' else rank -1
+
+    capturable_squares = [f"{f}{rank_capture}" for f in files]
+
+    for s in capturable_squares:
+        board_square = board[square_to_index(s)]
+        if (board_square < 0 and color == 'w') or (board_square > 0 and color == 'b'):
+            available_squares.append(s)
 
     return [(square, to_sqr) for to_sqr in available_squares]
 
