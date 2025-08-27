@@ -86,7 +86,8 @@ def validate_square(square):
     if square[0] not in ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']:
         raise ValueError("First symbol must be a letter between 'a' and 'h'")
     
-    # if not square[1] isdigit: raise 
+    if not 0 < int(square[1]) < 9:
+        raise ValueError("Rank must be a number from 1 to 8")
 
 if __name__ == "__main__":
 
