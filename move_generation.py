@@ -266,22 +266,47 @@ def generate_king_move(board, square, skip_validation=False):
     rank = int(square[1])
     c = ord(file)
     piece = board[square_to_index(square)]
+    potential_squares = []
+    available_squares = []
 
     if abs(piece) != 6 and not skip_validation:
         return []
     
     color = 'w' if piece > 0 else 'b'
+
+    potential_squares.append(f"{chr(c - 1)}{rank}")
+    potential_squares.append(f"{chr(c + 1)}{rank}")
+    potential_squares.append(f"{chr(c - 1)}{rank + 1}")
+    potential_squares.append(f"{chr(c - 1)}{rank - 1}")
+    potential_squares.append(f"{chr(c + 1)}{rank + 1}")
+    potential_squares.append(f"{chr(c + 1)}{rank - 1}")
+    potential_squares.append(f"{file}{rank + 1}")
+    potential_squares.append(f"{file}{rank - 1}")
     
+    for s in potential_squares:
+        try:
+            piece_on_board = board[square_to_index(s)]
+            if piece_on_board == 0:
+                available_squares.append(s)
+            elif (piece_on_board < 0 and color == 'w') or (piece_on_board > 0 and color == 'b'):
+                available_squares.append(s)
+            else:
+                pass
+        except (ValueError, IndexError):
+            pass
+    
+    return [(square, to_sqr) for to_sqr in available_squares]
+
 if __name__ == "__main__":
     #board = create_starting_position()
 
     board = create_empty_board()
     
-    piece = 5
-    board[square_to_index('e4')] = piece
-    board[square_to_index('f5')] = -piece
+    piece = 6
+    board[square_to_index('a1')] = piece
+    board[square_to_index('f5')] = piece
     
-    B_moves_a1 = generate_queen_move(board, 'e4')
+    B_moves_a1 = generate_king_move(board, 'a1')
 
     print(f"'a1' -> {B_moves_a1}")
 
