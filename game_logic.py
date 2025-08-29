@@ -1,4 +1,5 @@
 import chess_board
+import move_generation
 
 def make_move(board: list, move: tuple[str, str]) -> list:
     new_board = board.copy()
@@ -9,8 +10,29 @@ def make_move(board: list, move: tuple[str, str]) -> list:
 
     return new_board
 
-def generate_legal_moves():
-    ...
+def generate_legal_moves(board: list, color: str):
+    checking_pieces, pinned_pieces = analyze_king_safety(board, find_king(board, color))
+    player_pieces: list = find_pieces(board, color)
+    available_moves = []
+    
+    print(checking_pieces)
+    print(pinned_pieces)
+    
+    for piece, square in player_pieces:
+        if abs(piece) == chess_board.WHITE_PAWN:
+            available_moves.extend(move_generation.generate_pawn_move(board, square))
+        elif abs(piece) == chess_board.WHITE_ROOK:
+            available_moves.extend(move_generation.generate_rook_move(board, square))
+        elif abs(piece) == chess_board.WHITE_BISHOP:
+            available_moves.extend(move_generation.generate_bishop_move(board, square))
+        elif abs(piece) == chess_board.WHITE_KNIGHT:
+            available_moves.extend(move_generation.generate_knight_move(board, square))
+        elif abs(piece) == chess_board.WHITE_QUEEN:
+            available_moves.extend(move_generation.generate_queen_move(board, square))
+        elif abs(piece) == chess_board.WHITE_KING:
+            available_moves.extend(move_generation.generate_king_move(board, square))
+    
+    return available_moves
 
 def find_pieces(board: list, color: str) -> list[tuple[int, str]]:
     piece_list = []
@@ -21,6 +43,12 @@ def find_pieces(board: list, color: str) -> list[tuple[int, str]]:
             piece_list.append((board[i], square))
     
     return piece_list
+
+def find_king(board: list, color: str) -> str:
+    for i in range(64):
+        if (board[i] == chess_board.WHITE_KING and color == 'w') or (board[i] == chess_board.BLACK_KING and color == 'b'):
+            square = chess_board.index_to_square(i)
+            return square
         
 def analyze_king_safety(board: list, king_square: str) -> tuple[set, set]:
     file = king_square[0]
@@ -129,9 +157,18 @@ def knight_check(board: list, color: str, file: str, rank: int):
     return None        
 
 if __name__ == "__main__":
-    board = chess_board.create_empty_board()
+    #board = chess_board.create_empty_board()
     board = chess_board.create_starting_position()
+    
+    board = make_move(board, ('e2', 'e4'))
+    
+    chess_board.display_board(board)
+    
+    moves = generate_legal_moves(board, 'w')
 
+    print(moves)
+    
+    quit()
     piece_list = find_pieces(board, 'w')
     print(piece_list)
     
