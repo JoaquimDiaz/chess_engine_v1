@@ -1,5 +1,11 @@
 from board import square_to_index, create_empty_board
 
+def make_move():
+    ...
+
+def generate_legal_moves():
+    ...
+
 def generate_pawn_move(board, square, skip_validation=False):
     file = square[0]
     rank = int(square[1])
