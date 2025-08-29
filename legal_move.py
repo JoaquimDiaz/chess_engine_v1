@@ -26,6 +26,10 @@ def analyze_king_safety(board, king_square):
         if pinned_piece:
             pinned_pieces.add(pinned_piece)
     
+    knight_threat = knight_check(board, color, file, rank)
+    if knight_threat:
+        checking_pieces.add(knight_threat)
+    
     return checking_pieces, pinned_pieces
      
                 
@@ -77,7 +81,32 @@ def directional_check(board: list, file: str, rank: int, color: str, file_delta:
             break
         
     return None, None
-            
+
+def knight_check(board: list, color: str, file: str, rank: int):
+    c = ord(file)
+    threatning_piece: int = chess_board.WHITE_KNIGHT if color == 'b' else chess_board.BLACK_KNIGHT
+
+    squares_to_check: list = [
+        f"{chr(c + 1)}{rank + 2}",
+        f"{chr(c - 1)}{rank + 2}",
+        f"{chr(c + 1)}{rank - 2}",
+        f"{chr(c - 1)}{rank - 2}",
+        f"{chr(c + 2)}{rank + 1}",
+        f"{chr(c - 2)}{rank + 1}",
+        f"{chr(c + 2)}{rank - 1}",
+        f"{chr(c - 2)}{rank - 1}",
+    ]
+
+    for sqr in squares_to_check:
+        try:
+            piece_on_board = board[chess_board.square_to_index(sqr)]
+            if piece_on_board == threatning_piece:
+                return sqr
+        except (ValueError, IndexError):
+            pass 
+    
+    return None        
+
 if __name__ == "__main__":
     board = chess_board.create_empty_board()
     
@@ -90,6 +119,8 @@ if __name__ == "__main__":
     board[chess_board.square_to_index('f5')] = 3
 
     board[chess_board.square_to_index('e8')] = -4
+
+    board[chess_board.square_to_index('f6')] = -2
 
     checking_pieces, pinned_pieces = analyze_king_safety(board, 'e4')
 
