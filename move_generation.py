@@ -1,4 +1,4 @@
-from chess_board import create_starting_position, square_to_index, index_to_square, create_empty_board
+from board import square_to_index, create_empty_board
 
 def generate_pawn_move(board, square, skip_validation=False):
     file = square[0]
