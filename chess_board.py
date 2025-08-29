@@ -21,6 +21,8 @@ PIECE_NAMES = {
     3: 'B', -3: 'b', 4: 'R', -4: 'r',
     5: 'Q', -5: 'q', 6: 'K', -6: 'k'
 }
+def create_empty_board():
+    return [0] * 64
 
 def create_starting_position():
     " Return the sarting position of a chess game as an array. "
