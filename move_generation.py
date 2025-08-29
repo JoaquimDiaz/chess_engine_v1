@@ -156,21 +156,361 @@ def generate_rook_move(board, square):
     
     return [(square, to_sqr) for to_sqr in available_squares]
 
+def generate_bishop_move(board, square):
+    file = square[0]
+    rank = int(square[1])
+    c = ord(file)
+    piece = board[square_to_index(square)]
+
+    available_squares = []
+    
+    if abs(piece) != 3:
+        return []
+
+    color = 'w' if piece > 0 else 'b'
+    
+    # up-right
+    x, y = 0, 0
+    while c + x < 104 and rank + y < 8:
+        x += 1
+        y += 1    
+
+        sqr = f"{chr(c + x)}{rank + y}"
+        piece_on_sqr = board[square_to_index(sqr)]
+
+        if piece_on_sqr == 0:
+            available_squares.append(sqr)
+           
+        elif (piece_on_sqr < 0 and color == 'w') or (piece_on_sqr > 0 and color == 'b'):
+            available_squares.append(sqr)
+            break
+
+        else:
+            break
+    
+    # up-left
+    x, y = 0, 0
+    while c + x > 97 and rank + y < 8:
+        x -= 1
+        y += 1
+
+        sqr = f"{chr(c + x)}{rank + y}"
+        piece_on_sqr = board[square_to_index(sqr)]
+
+        if piece_on_sqr == 0:
+            available_squares.append(sqr)
+           
+        elif (piece_on_sqr < 0 and color == 'w') or (piece_on_sqr > 0 and color == 'b'):
+            available_squares.append(sqr)
+            break
+
+        else:
+            break
+        
+        
+    # down-left
+    x, y = 0, 0
+    while c + x > 97 and rank + y > 1:
+        x -= 1
+        y -= 1
+    
+        sqr = f"{chr(c + x)}{rank + y}"
+        piece_on_sqr = board[square_to_index(sqr)]
+
+        if piece_on_sqr == 0:
+            available_squares.append(sqr)
+           
+        elif (piece_on_sqr < 0 and color == 'w') or (piece_on_sqr > 0 and color == 'b'):
+            available_squares.append(sqr)
+            break
+
+        else:
+            break
+    
+    # down-right
+    x, y = 0, 0
+    while c + x < 104 and rank + y > 1:
+        x += 1
+        y -= 1
+    
+        sqr = f"{chr(c + x)}{rank + y}"
+        piece_on_sqr = board[square_to_index(sqr)]
+
+        if piece_on_sqr == 0:
+            available_squares.append(sqr)
+           
+        elif (piece_on_sqr < 0 and color == 'w') or (piece_on_sqr > 0 and color == 'b'):
+            available_squares.append(sqr)
+            break
+
+        else:
+            break
+
+    return [(square, to_sqr) for to_sqr in available_squares]
+
+def generate_queen_move(board, square):
+    file = square[0]
+    rank = int(square[1])
+    c = ord(file)
+    piece = board[square_to_index(square)]
+
+    if abs(piece) != 5:
+        return []
+    
+    color = 'w' if piece > 0 else 'b'
+
+    available_squares = []
+    
+    ## left
+    i = 0
+    while c + i > 97:
+        i -= 1
+        sqr = f"{chr(c + i)}{rank}"
+        piece_on_sqr = board[square_to_index(sqr)]
+        if piece_on_sqr == 0:
+            available_squares.append(sqr)
+        elif (piece_on_sqr < 0 and color == 'w') or (piece_on_sqr > 0 and color == 'b'):
+            available_squares.append(sqr)
+            break
+        else:
+            break
+    ## right
+    i = 0
+    while c + i < 104:
+        i += 1
+        sqr = f"{chr(c + i)}{rank}"
+        piece_on_sqr = board[square_to_index(sqr)]
+        if piece_on_sqr == 0:
+            available_squares.append(sqr)
+        elif (piece_on_sqr < 0 and color == 'w') or (piece_on_sqr > 0 and color == 'b'):
+            available_squares.append(sqr)
+            break
+        else:
+            break
+    
+    ## up
+    i = 0
+    while rank + i < 8:
+        i += 1
+        sqr = f"{file}{rank + i}"
+        piece_on_sqr = board[square_to_index(sqr)]
+        if piece_on_sqr == 0:
+            available_squares.append(sqr)
+        elif (piece_on_sqr < 0 and color == 'w') or (piece_on_sqr > 0 and color == 'b'):
+            available_squares.append(sqr)
+            break
+        else:
+            break
+    
+    ## down
+    i = 0
+    while rank + i > 1:
+        i -= 1
+        sqr = f"{file}{rank + i}"
+        piece_on_sqr = board[square_to_index(sqr)]
+        if piece_on_sqr == 0:
+            available_squares.append(sqr)
+        elif (piece_on_sqr < 0 and color == 'w') or (piece_on_sqr > 0 and color == 'b'):
+            available_squares.append(sqr)
+            break
+        else:
+            break
+    
+    # up-right
+    x, y = 0, 0
+    while c + x < 104 and rank + y < 8:
+        x += 1
+        y += 1    
+
+        sqr = f"{chr(c + x)}{rank + y}"
+        piece_on_sqr = board[square_to_index(sqr)]
+
+        if piece_on_sqr == 0:
+            available_squares.append(sqr)
+           
+        elif (piece_on_sqr < 0 and color == 'w') or (piece_on_sqr > 0 and color == 'b'):
+            available_squares.append(sqr)
+            break
+
+        else:
+            break
+    
+    # up-left
+    x, y = 0, 0
+    while c + x > 97 and rank + y < 8:
+        x -= 1
+        y += 1
+
+        sqr = f"{chr(c + x)}{rank + y}"
+        piece_on_sqr = board[square_to_index(sqr)]
+
+        if piece_on_sqr == 0:
+            available_squares.append(sqr)
+           
+        elif (piece_on_sqr < 0 and color == 'w') or (piece_on_sqr > 0 and color == 'b'):
+            available_squares.append(sqr)
+            break
+
+        else:
+            break
+        
+        
+    # down-left
+    x, y = 0, 0
+    while c + x > 97 and rank + y > 1:
+        x -= 1
+        y -= 1
+    
+        sqr = f"{chr(c + x)}{rank + y}"
+        piece_on_sqr = board[square_to_index(sqr)]
+
+        if piece_on_sqr == 0:
+            available_squares.append(sqr)
+           
+        elif (piece_on_sqr < 0 and color == 'w') or (piece_on_sqr > 0 and color == 'b'):
+            available_squares.append(sqr)
+            break
+
+        else:
+            break
+    
+    # down-right
+    x, y = 0, 0
+    while c + x < 104 and rank + y > 1:
+        x += 1
+        y -= 1
+    
+        sqr = f"{chr(c + x)}{rank + y}"
+        piece_on_sqr = board[square_to_index(sqr)]
+
+        if piece_on_sqr == 0:
+            available_squares.append(sqr)
+           
+        elif (piece_on_sqr < 0 and color == 'w') or (piece_on_sqr > 0 and color == 'b'):
+            available_squares.append(sqr)
+            break
+
+        else:
+            break
+
+    return [(square, to_sqr) for to_sqr in available_squares]
+
+def generate_bishop_move(board, square):
+    file = square[0]
+    rank = int(square[1])
+    c = ord(file)
+    piece = board[square_to_index(square)]
+
+    available_squares = []
+    
+    if abs(piece) != 3:
+        return []
+
+    color = 'w' if piece > 0 else 'b'
+    
+    # up-right
+    x, y = 0, 0
+    while c + x < 104 and rank + y < 8:
+        x += 1
+        y += 1    
+
+        sqr = f"{chr(c + x)}{rank + y}"
+        piece_on_sqr = board[square_to_index(sqr)]
+
+        if piece_on_sqr == 0:
+            available_squares.append(sqr)
+           
+        elif (piece_on_sqr < 0 and color == 'w') or (piece_on_sqr > 0 and color == 'b'):
+            available_squares.append(sqr)
+            break
+
+        else:
+            break
+    
+    # up-left
+    x, y = 0, 0
+    while c + x > 97 and rank + y < 8:
+        x -= 1
+        y += 1
+
+        sqr = f"{chr(c + x)}{rank + y}"
+        piece_on_sqr = board[square_to_index(sqr)]
+
+        if piece_on_sqr == 0:
+            available_squares.append(sqr)
+           
+        elif (piece_on_sqr < 0 and color == 'w') or (piece_on_sqr > 0 and color == 'b'):
+            available_squares.append(sqr)
+            break
+
+        else:
+            break
+        
+        
+    # down-left
+    x, y = 0, 0
+    while c + x > 97 and rank + y > 1:
+        x -= 1
+        y -= 1
+    
+        sqr = f"{chr(c + x)}{rank + y}"
+        piece_on_sqr = board[square_to_index(sqr)]
+
+        if piece_on_sqr == 0:
+            available_squares.append(sqr)
+           
+        elif (piece_on_sqr < 0 and color == 'w') or (piece_on_sqr > 0 and color == 'b'):
+            available_squares.append(sqr)
+            break
+
+        else:
+            break
+    
+    # down-right
+    x, y = 0, 0
+    while c + x < 104 and rank + y > 1:
+        x += 1
+        y -= 1
+    
+        sqr = f"{chr(c + x)}{rank + y}"
+        piece_on_sqr = board[square_to_index(sqr)]
+
+        if piece_on_sqr == 0:
+            available_squares.append(sqr)
+           
+        elif (piece_on_sqr < 0 and color == 'w') or (piece_on_sqr > 0 and color == 'b'):
+            available_squares.append(sqr)
+            break
+
+        else:
+            break
+
+    return [(square, to_sqr) for to_sqr in available_squares]
+    
+
 if __name__ == "__main__":
     #board = create_starting_position()
 
     board = create_empty_board()
     
-    board[square_to_index('e4')] = 4
-    board[square_to_index('h4')] = -4
-    board[square_to_index('a4')] = -4
-    board[square_to_index('e1')] = -4
-    board[square_to_index('e8')] = -4
+    piece = 5
+    board[square_to_index('e4')] = piece
+    board[square_to_index('f5')] = -piece
+    
+    B_moves_a1 = generate_queen_move(board, 'e4')
+
+    print(f"'a1' -> {B_moves_a1}")
+
+    '''
+    board[square_to_index('h4')] = -piece
+    board[square_to_index('a4')] = -piece
+    board[square_to_index('e1')] = -piece
+    board[square_to_index('e8')] = -piece
 
     R_moves_e4 = generate_rook_move(board, 'e4')
     
     print(f"'e4' -> {R_moves_e4}")
-    '''
+
     board[square_to_index('e4')] = 2
     N_moves_e4 = generate_knight_move(board, 'e4')
     N_moves_b1 = generate_knight_move(board, 'b1')
