@@ -11,7 +11,13 @@ def make_move(board: list, move: tuple[str, str]) -> list:
     return new_board
 
 def generate_legal_moves(board: list, color: str):
-    checking_pieces, pinned_pieces = analyze_king_safety(board, find_king(board, color))
+    king_square = find_king(board, color)
+    checking_pieces, pinned_pieces = analyze_king_safety(board, king_square)
+    
+    king_file = square[0]
+    king_rank = int(square[1])
+
+    
     player_pieces: list = find_pieces(board, color)
     available_moves = []
     
@@ -34,6 +40,43 @@ def generate_legal_moves(board: list, color: str):
     
     return available_moves
 
+def handle_checks(board:list, colors: str, king_square: str, checking_pieces: set):
+    nb_check = len(checking_pieces)
+    if nb_check == 0:
+        raise ValueError("No checking pieces in set")
+    elif nb_check == 1:
+        king_file = king_square[0]
+        king_rank = int(king_square[1])
+        
+        if checking_pieces:
+            ...
+
+
+    elif nb_check > 1:
+        ...
+    
+def is_on_same_diagonal(sqr_1: str, sqr_2: str) -> bool:
+    c: int = ord(sqr_1[0])
+    rank: int = int(sqr_1[1])
+    diagonal_squares: list[str] = []
+    directions: list[tuple] = [(1, 1), (1, -1), (-1, 1), (-1, -1)]
+    
+    for y, x in directions:
+        for i in range(8):
+            square = f"{chr(c + y * i)}{rank + x * i}"
+            try:
+                chess_board.validate_square(square)
+                diagonal_squares.append(square)
+            except (ValueError, IndexError):
+                continue
+    
+    return sqr_2 in diagonal_squares
+
+def is_on_same_row(sqr_1: str, sqr_2: str) -> bool:
+    if sqr_1[0] == sqr_2[0] or sqr_1[1] == sqr_2[1]:
+        return True
+    return False
+    
 def find_pieces(board: list, color: str) -> list[tuple[int, str]]:
     piece_list = []
     for i in range(64):
@@ -49,6 +92,8 @@ def find_king(board: list, color: str) -> str:
         if (board[i] == chess_board.WHITE_KING and color == 'w') or (board[i] == chess_board.BLACK_KING and color == 'b'):
             square = chess_board.index_to_square(i)
             return square
+    
+    raise ValueError(f"No king found for {color}")
         
 def analyze_king_safety(board: list, king_square: str) -> tuple[set, set]:
     file = king_square[0]
@@ -161,8 +206,10 @@ if __name__ == "__main__":
     board = chess_board.create_starting_position()
     
     board = make_move(board, ('e2', 'e4'))
+    board = make_move(board, ('e7', 'e5'))
+    board = make_move(board, ('b1', 'c3'))
     
-    chess_board.display_board(board)
+    chess_board.pretty_display_board(board)
     
     moves = generate_legal_moves(board, 'w')
 
