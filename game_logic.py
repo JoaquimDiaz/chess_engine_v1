@@ -55,28 +55,6 @@ def handle_checks(board:list, colors: str, king_square: str, checking_pieces: se
     elif nb_check > 1:
         ...
     
-def is_on_same_diagonal(sqr_1: str, sqr_2: str) -> bool:
-    c: int = ord(sqr_1[0])
-    rank: int = int(sqr_1[1])
-    diagonal_squares: list[str] = []
-    directions: list[tuple] = [(1, 1), (1, -1), (-1, 1), (-1, -1)]
-    
-    for y, x in directions:
-        for i in range(8):
-            square = f"{chr(c + y * i)}{rank + x * i}"
-            try:
-                chess_board.validate_square(square)
-                diagonal_squares.append(square)
-            except (ValueError, IndexError):
-                continue
-    
-    return sqr_2 in diagonal_squares
-
-def is_on_same_row(sqr_1: str, sqr_2: str) -> bool:
-    if sqr_1[0] == sqr_2[0] or sqr_1[1] == sqr_2[1]:
-        return True
-    return False
-    
 def find_pieces(board: list, color: str) -> list[tuple[int, str]]:
     piece_list = []
     for i in range(64):
