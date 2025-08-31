@@ -60,10 +60,27 @@ def pretty_display_board(board):
 
     print("   ----------------")
     print("   a b c d e f g h")
-    
-def square_to_index(square):
+
+def parse_square(square) -> tuple[int, int]:  
+    ''' Parse a classical chess square 'a1' into two int (file, rank) '''
+    return ord(square[0]) - 97, int(square[1])
+
+def is_rook_aligned(sqr1: str, sqr2: str) -> bool:
+    ''' Check if two pieces are rook aligned, meaning on the same row or rank '''
+    f1, r1 = parse_square(sqr1)
+    f2, r2 = parse_square(sqr2)
+    return (f1 == f2) or (r1 == r2)
+
+def is_on_same_diagonal(sqr1: str, sqr2: str) -> bool:
+    ''' Check if two pieces are on the same diagonal '''
+    f1, r1 = parse_square(sqr1)
+    f2, r2 = parse_square(sqr2)
+    return abs(f1 - r1) == abs(f2 - r2)
+
+def square_to_index(square, skip_validation = False) -> int:
     ''''''
-    validate_square(square) 
+    if not skip_validation:
+        validate_square(square) 
 
     file = ord(square[0]) - ord('a')
     rank = int(square[1]) - 1
@@ -93,20 +110,9 @@ def validate_square(square):
 
 if __name__ == "__main__":
 
-    square = 'a1'
-
-    print(square_to_index(square))
-    print(index_to_square(square_to_index(square)))
-    print("")
-    
     board = create_starting_position()
 
-    print("Chess board: ")
-    display_board(board)
-    
-    print("____________")
-    print(" ")
-    
-    print("Pretty chess board: ")
-    pretty_display_board(board)
-    
+    print(is_on_same_diagonal('a1', 'h8'))
+    print(is_on_same_diagonal('a1', 'f8'))
+    print(is_rook_aligned('e4', 'h8'))
+    print(is_rook_aligned('e4', 'e8'))
