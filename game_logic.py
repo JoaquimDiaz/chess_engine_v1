@@ -1,5 +1,8 @@
 import chess_board
 import move_generation
+import logging
+
+logger = logging.getLogger(__name__)
 
 def make_move(board: list, move: tuple[str, str]) -> list:
     new_board = board.copy()
@@ -11,9 +14,15 @@ def make_move(board: list, move: tuple[str, str]) -> list:
     return new_board
 
 def generate_legal_moves(board: list, color: str):
+    """
+    ?? Generating all possible moves and then filtering with king safety considerations ?
+    """
     king_square = find_king(board, color)
     checking_pieces, pinned_pieces = analyze_king_safety(board, king_square)
     
+    if checking_pieces:
+        handle_checks(board, color, king_square, checking_pieces)
+
     king_file = square[0]
     king_rank = int(square[1])
 
@@ -42,8 +51,12 @@ def generate_legal_moves(board: list, color: str):
 
 def handle_checks(board:list, colors: str, king_square: str, checking_pieces: set):
     nb_check = len(checking_pieces)
+    # Raise error if no checking pieces in set
     if nb_check == 0:
         raise ValueError("No checking pieces in set")
+        
+    # Handle case where 1 piece is checking the king
+    # - You can move the king, take the checking piece or block the check
     elif nb_check == 1:
         king_file = king_square[0]
         king_rank = int(king_square[1])
@@ -51,28 +64,12 @@ def handle_checks(board:list, colors: str, king_square: str, checking_pieces: se
         if checking_pieces:
             ...
 
-
+    # Handle case where more than 1 piece is checking the king.
+    # - The king has to move
     elif nb_check > 1:
+        # generate_king_moves()
         ...
     
-def find_pieces(board: list, color: str) -> list[tuple[int, str]]:
-    piece_list = []
-    for i in range(64):
-        piece = board[i]
-        if (piece > 0 and color == 'w') or (piece < 0 and color == 'b'):
-            square = chess_board.index_to_square(i)
-            piece_list.append((board[i], square))
-    
-    return piece_list
-
-def find_king(board: list, color: str) -> str:
-    for i in range(64):
-        if (board[i] == chess_board.WHITE_KING and color == 'w') or (board[i] == chess_board.BLACK_KING and color == 'b'):
-            square = chess_board.index_to_square(i)
-            return square
-    
-    raise ValueError(f"No king found for {color}")
-        
 def analyze_king_safety(board: list, king_square: str) -> tuple[set, set]:
     file = king_square[0]
     rank = int(king_square[1])

@@ -1,4 +1,9 @@
 from chess_board import square_to_index, create_empty_board
+import chess_board as cb
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 def generate_pawn_move(board, square, skip_validation=False):
     file = square[0]
@@ -268,6 +273,7 @@ def generate_king_move(board, square, skip_validation=False):
     piece = board[square_to_index(square)]
     potential_squares = []
     available_squares = []
+    safe_squares = []
 
     if abs(piece) != 6 and not skip_validation:
         return []
@@ -295,7 +301,65 @@ def generate_king_move(board, square, skip_validation=False):
         except (ValueError, IndexError):
             pass
     
-    return [(square, to_sqr) for to_sqr in available_squares]
+    for s in available_squares:
+        if is_safe_square(board, s):
+            safe_squares.append(s)
+
+    return [(square, to_sqr) for to_sqr in safe_squares]
+
+def is_safe_square(board: list, square) -> bool:
+    """
+    Validate the safety of a square for king movement.
+    A square is safe is the king can move to this square without being captured.
+
+    Returns:
+        bool: True if square is safe else False
+    """
+    ...
+
+def find_pieces(board: list, color: str) -> list[tuple[int, str]]:
+    piece_list = []
+    for i in range(64):
+        piece = board[i]
+        if (piece > 0 and color == 'w') or (piece < 0 and color == 'b'):
+            square = cb.index_to_square(i)
+            piece_list.append((board[i], square))
+    
+    return piece_list
+
+def find_king(board: list, color: str) -> str:
+    for i in range(64):
+        if (board[i] == cb.WHITE_KING and color == 'w') or (board[i] == cb.BLACK_KING and color == 'b'):
+            square = cb.index_to_square(i)
+            return square
+    
+    raise ValueError(f"No king found for {color}")
+        
+def generate_all_moves(board: list, color: str) -> list[tuple[str, str]]:
+    """
+    Generate all possible moves in a given position for the given piece color.
+    
+    Returns:
+        list of tuple with str
+    """
+    color_pieces: list = find_pieces(board, color)
+    available_moves: list = []
+
+    for piece, square in color_pieces:
+        if abs(piece) == cb.WHITE_PAWN:
+            available_moves.extend(generate_pawn_move(board, square))
+        elif abs(piece) == cb.WHITE_ROOK:
+            available_moves.extend(generate_rook_move(board, square))
+        elif abs(piece) == cb.WHITE_BISHOP:
+            available_moves.extend(generate_bishop_move(board, square))
+        elif abs(piece) == cb.WHITE_KNIGHT:
+            available_moves.extend(generate_knight_move(board, square))
+        elif abs(piece) == cb.WHITE_QUEEN:
+            available_moves.extend(generate_queen_move(board, square))
+        elif abs(piece) == cb.WHITE_KING:
+            available_moves.extend(generate_king_move(board, square))
+
+    return available_moves
 
 if __name__ == "__main__":
     #board = create_starting_position()
@@ -309,6 +373,10 @@ if __name__ == "__main__":
     B_moves_a1 = generate_king_move(board, 'a1')
 
     print(f"'a1' -> {B_moves_a1}")
+
+    a = find_pieces(board, 'w')
+    #a = generate_all_moves(board, 'b')
+    print(a)
 
     '''
     board[square_to_index('h4')] = -piece

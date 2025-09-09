@@ -1,6 +1,6 @@
 import pytest
-from game_logic import find_pieces, is_on_same_diagonal, is_on_same_row
-from chess_board import create_starting_position, create_empty_board
+from move_generation import find_pieces
+from chess_board import create_starting_position, create_empty_board, is_on_same_diagonal, is_rook_aligned
 
 empty_board = create_empty_board()
 starting_position = create_starting_position()
@@ -30,9 +30,9 @@ def test_color_separation():
 
 def test_is_on_same_row():
 
-    assert is_on_same_row('a1', 'a7') == True
-    assert is_on_same_row('e4', 'b4') == True
-    assert is_on_same_row('b5', 'c4') == False
+    assert is_rook_aligned('a1', 'a7') == True
+    assert is_rook_aligned('e4', 'b4') == True
+    assert is_rook_aligned('b5', 'c4') == False
 
 def test_is_on_same_diagonal():
     

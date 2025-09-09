@@ -73,7 +73,7 @@ def pretty_display_board(board):
 
 def parse_square(square) -> tuple[int, int]:  
     ''' Parse a classical chess square 'a1' into two int (file, rank) '''
-    return ord(square[0]) - 97, int(square[1])
+    return ord(square[0]) - 96, int(square[1])
 
 def is_rook_aligned(sqr1: str, sqr2: str) -> bool:
     ''' Check if two pieces are rook aligned, meaning on the same row or rank '''
@@ -87,23 +87,26 @@ def is_on_same_diagonal(sqr1: str, sqr2: str) -> bool:
     f2, r2 = parse_square(sqr2)
     return abs(f1 - r1) == abs(f2 - r2)
 
-def square_to_index(square, skip_validation = False) -> int:
-    ''''''
+def square_to_index(square: str, skip_validation = False) -> int:
+    """
+    Turn a 2 chr square into an index for a `board` list (from 0 to 63).
+    """
     if not skip_validation:
         validate_square(square) 
 
-    file = ord(square[0]) - ord('a')
-    rank = int(square[1]) - 1
+    f, r = parse_square(square)
 
-    return rank * 8 + file
+    return (r - 1) * 8 + f -1
 
 def index_to_square(index: int) -> str:
-    ''''''
+    """
+    Turn a `board` index into a chess square with two characters.
+    """
     if not 0 <= index < 64:
         raise ValueError("Index must be an integer between '0' and '64'")
     
     rank = index // 8  
-    file = chr((index % 8) + ord('a')) 
+    file = chr((index % 8) + 97) 
     
     return f"{file}{rank+1}"
 
