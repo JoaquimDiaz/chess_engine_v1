@@ -1,3 +1,7 @@
+import logging
+
+logger = logging.getLogger(__name__)
+
 EMPTY_SQUARE = 0
 WHITE_PAWN, BLACK_PAWN = 1, -1
 WHITE_KNIGHT, BLACK_KNIGHT = 2, -2
@@ -38,7 +42,10 @@ def create_starting_position():
 
     return board
 
-def display_board(board):
+def display_board(board: list) -> None:
+    """
+    Display a chess board with pieces as numbers in the terminal.
+    """
     print("    a b c d e f g h")
     print("    ---------------")
     for rank in range(7, -1, -1):  
@@ -51,6 +58,9 @@ def display_board(board):
     print("    a b c d e f g h")
    
 def pretty_display_board(board):
+    """
+    Display a 'pretty' chess board with ASCI pieces.
+    """
     print("   a b c d e f g h")
     print("   ----------------")
     for rank in range(8, 0, -1):
@@ -87,7 +97,7 @@ def square_to_index(square, skip_validation = False) -> int:
 
     return rank * 8 + file
 
-def index_to_square(index):
+def index_to_square(index: int) -> str:
     ''''''
     if not 0 <= index < 64:
         raise ValueError("Index must be an integer between '0' and '64'")
@@ -97,8 +107,16 @@ def index_to_square(index):
     
     return f"{file}{rank+1}"
 
-def validate_square(square):
-    
+def validate_square(square: str) -> None:
+    """
+    Validate that a 2 char string is part of a chess board.
+
+    Raises:
+        ValueError
+            - not 2 chr
+            - first chr is a letter a -> h
+            - second chr is a number 1 -> 8
+    """
     if len(square) != 2:
         raise ValueError("Wrong square input")
 
