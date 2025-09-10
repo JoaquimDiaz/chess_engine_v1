@@ -71,6 +71,18 @@ def pretty_display_board(board):
     print("   ----------------")
     print("   a b c d e f g h")
 
+def parse_color(board: list, square: str) -> str:
+    piece = board[square_to_index(square)]
+    if piece == 0:
+        raise ValueError(f"Square '{square}' is not a piece.")
+    return 'w' if piece > 0 else 'b'
+
+def parse_coordinates(file: int, rank: int) -> str:
+    """
+    Parse coordinates back into a chess square eg. 'a1' for (1, 1)
+    """
+    return f"{chr(file + 96)}{rank}"
+
 def parse_square(square) -> tuple[int, int]:  
     ''' Parse a classical chess square 'a1' into two int (file, rank) '''
     return ord(square[0]) - 96, int(square[1])
