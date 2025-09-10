@@ -1,11 +1,18 @@
-from chess_board import square_to_index, create_empty_board
+from chess_board import square_to_index, create_empty_board, parse_square, parse_coordinates, parse_color
 import chess_board as cb
 
 import logging
 
 logger = logging.getLogger(__name__)
 
-def generate_pawn_move(board, square, skip_validation=False):
+PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING = (
+    cb.WHITE_PAWN, cb.WHITE_KNIGHT,
+    cb.WHITE_BISHOP, cb.WHITE_ROOK,
+    cb.WHITE_QUEEN, cb.WHITE_KING
+)
+
+
+def generate_pawn_move(board, square, skip_validation=False, return_origin=True) -> list[tuple[str, str]] | list[str]:
     file = square[0]
     rank = int(square[1])
     piece = board[square_to_index(square)]
@@ -26,6 +33,7 @@ def generate_pawn_move(board, square, skip_validation=False):
     if board[idx1] == 0:
         available_squares.append(sqr1)
 
+        # If pawns are on their initial square allow to move two squares
         if (color == 'w' and rank == 2) or (color == 'b' and rank == 7):
             sqr2 = f"{file}{rank + 2}" if color == 'w' else f"{file}{rank - 2}"
             idx2 = square_to_index(sqr2)
@@ -55,9 +63,33 @@ def generate_pawn_move(board, square, skip_validation=False):
         if (board_square < 0 and color == 'w') or (board_square > 0 and color == 'b'):
             available_squares.append(s)
 
-    return [(square, to_sqr) for to_sqr in available_squares]
+    if return_origin:
+        return [(square, to_sqr) for to_sqr in available_squares]
+    else:
+        return available_squares
 
-def generate_knight_move(board, square, skip_validation=False):
+def generate_pawn_attacks(board: list, square: str, return_origin=True) -> list[tuple[str, str]] | list[str]:
+    """
+    Generate diagonal pawn attacking moves. Used for checking if a square is safe for the king to move.
+    """
+    f, r = parse_square(square)
+    attacked_squares: list = []
+    color: str = 'b' if board[square_to_index(square)] < 0 else 'w'
+
+    new_rank = r - 1 if color == 'b' else r + 1
+    for file_delta in (1, -1):
+        new_file = f + file_delta
+        if 1 <= new_file <= 8 and 1 <= new_rank <= 8:
+            attacked_squares.append(parse_coordinates(new_file, new_rank))
+        else:
+            continue
+
+    if return_origin:
+        return [(square, to_sqr) for to_sqr in attacked_squares]
+    else:
+        return attacked_squares
+
+def generate_knight_move(board, square, skip_validation=False, return_origin=True) -> list[tuple[str, str]] | list[str]:
     file = square[0] 
     rank = int(square[1])
     c = ord(file)
@@ -88,10 +120,12 @@ def generate_knight_move(board, square, skip_validation=False):
                 available_squares.append(s)
         except (ValueError, IndexError):
             continue
-    
-    return [(square, to_sqr) for to_sqr in available_squares]
+    if return_origin:
+        return [(square, to_sqr) for to_sqr in available_squares]
+    else:
+        return available_squares
 
-def generate_rook_move(board, square, skip_validation=False):
+def generate_rook_move(board, square, skip_validation=False, return_origin=True) -> list[tuple[str, str]] | list[str]:
     file = square[0]
     rank = int(square[1])
     c = ord(file)
@@ -159,9 +193,12 @@ def generate_rook_move(board, square, skip_validation=False):
         else:
             break
     
-    return [(square, to_sqr) for to_sqr in available_squares]
+    if return_origin:
+        return [(square, to_sqr) for to_sqr in available_squares]
+    else:
+        return available_squares
 
-def generate_bishop_move(board, square, skip_validation=False):
+def generate_bishop_move(board, square, skip_validation=False, return_origin=True) -> list[tuple[str, str]] | list[str]:
     file = square[0]
     rank = int(square[1])
     c = ord(file)
@@ -251,9 +288,12 @@ def generate_bishop_move(board, square, skip_validation=False):
         else:
             break
 
-    return [(square, to_sqr) for to_sqr in available_squares]
+    if return_origin:
+        return [(square, to_sqr) for to_sqr in available_squares]
+    else:
+        return available_squares
 
-def generate_queen_move(board, square, skip_validation=False):
+def generate_queen_move(board, square, skip_validation=False, return_origin=True) -> list[tuple[str, str]] | list[str]:
     piece = board[square_to_index(square)]
 
     if abs(piece) != 5 and not skip_validation:
@@ -261,12 +301,18 @@ def generate_queen_move(board, square, skip_validation=False):
 
     move_list = []
 
-    move_list.extend(generate_bishop_move(board, square, skip_validation=True))
-    move_list.extend(generate_rook_move(board, square, skip_validation=True))
+    if return_origin:
+        move_list.extend(generate_bishop_move(board, square, skip_validation=True))
+        move_list.extend(generate_rook_move(board, square, skip_validation=True))
 
-    return move_list
+        return move_list
+    else:
+        move_list.extend(generate_bishop_move(board, square, skip_validation=True, return_origin=False))
+        move_list.extend(generate_rook_move(board, square, skip_validation=True, return_origin=False))
 
-def generate_king_move(board, square, skip_validation=False):
+        return move_list
+
+def generate_king_move(board, square, skip_validation=False, return_origin=True) -> list[tuple[str, str]] | list[str]:
     file = square[0]
     rank = int(square[1])
     c = ord(file)
@@ -301,11 +347,16 @@ def generate_king_move(board, square, skip_validation=False):
         except (ValueError, IndexError):
             pass
     
-    for s in available_squares:
-        if is_safe_square(board, s):
-            safe_squares.append(s)
+    if return_origin:
+        return [(square, to_sqr) for to_sqr in available_squares]
+    else:
+        return available_squares
+#    for s in available_squares:
+#        if is_safe_square(board, s):
+#            safe_squares.append(s)
 
-    return [(square, to_sqr) for to_sqr in safe_squares]
+
+#    return [(square, to_sqr) for to_sqr in safe_squares]
 
 def is_safe_square(board: list, square) -> bool:
     """
@@ -318,6 +369,12 @@ def is_safe_square(board: list, square) -> bool:
     ...
 
 def find_pieces(board: list, color: str) -> list[tuple[int, str]]:
+    """
+    Return a list of tuple with the piece number and associated square.
+    
+    Returns:
+        list[(piece, square)]
+    """
     piece_list = []
     for i in range(64):
         piece = board[i]
@@ -328,6 +385,12 @@ def find_pieces(board: list, color: str) -> list[tuple[int, str]]:
     return piece_list
 
 def find_king(board: list, color: str) -> str:
+    """
+    Find the king's on the board and returns the associated square.
+
+    Raises:
+        ValueError if the king for the given color is not found.
+    """
     for i in range(64):
         if (board[i] == cb.WHITE_KING and color == 'w') or (board[i] == cb.BLACK_KING and color == 'b'):
             square = cb.index_to_square(i)
@@ -335,47 +398,75 @@ def find_king(board: list, color: str) -> str:
     
     raise ValueError(f"No king found for {color}")
         
-def generate_all_moves(board: list, color: str) -> list[tuple[str, str]]:
+def generate_attacked_squares(board: list, color: str, return_origin=True) -> list[tuple[str, str]]:
     """
     Generate all possible moves in a given position for the given piece color.
     
     Returns:
         list of tuple with str
     """
+    MOVE_GENERATOR = {
+        PAWN : generate_pawn_attacks,
+        KNIGHT : generate_knight_move,
+        BISHOP : generate_bishop_move,
+        ROOK : generate_rook_move,
+        QUEEN : generate_queen_move,
+        KING : generate_king_move
+    }
+
     color_pieces: list = find_pieces(board, color)
-    available_moves: list = []
+    attacked_squares: list = [] 
 
     for piece, square in color_pieces:
-        if abs(piece) == cb.WHITE_PAWN:
-            available_moves.extend(generate_pawn_move(board, square))
-        elif abs(piece) == cb.WHITE_ROOK:
-            available_moves.extend(generate_rook_move(board, square))
-        elif abs(piece) == cb.WHITE_BISHOP:
-            available_moves.extend(generate_bishop_move(board, square))
-        elif abs(piece) == cb.WHITE_KNIGHT:
-            available_moves.extend(generate_knight_move(board, square))
-        elif abs(piece) == cb.WHITE_QUEEN:
-            available_moves.extend(generate_queen_move(board, square))
-        elif abs(piece) == cb.WHITE_KING:
-            available_moves.extend(generate_king_move(board, square))
+        generator = MOVE_GENERATOR[abs(piece)]
+        attacked_squares.extend(generator(board, square, return_origin=return_origin))
+    
+    return attacked_squares
 
-    return available_moves
+def generate_king_legal_move(board: list, color: str, return_origin=True) -> list[tuple[str, str] | list[str]]:
+    """
+    Generate legal moves for the king by filtering with the list of square controlled by the opponent pieces.
+
+    Returns:
+        - list of tuple if returns_origin is True: (king_square, to_square)
+        - list of the squares if returns_origin is False
+    """
+    legal_moves: list = []
+    king_square: str = find_king(board, color)
+    available_moves: list = generate_king_move(board, king_square, return_origin=False)
+    
+    opponent_color: str = 'b' if color == 'w' else 'w'
+    attacked_squares = set(generate_attacked_squares(board, opponent_color, return_origin=False))
+
+    for s in available_moves:
+        if s not in attacked_squares:
+            legal_moves.append(s)
+    
+    if return_origin:
+        return [(king_square, to_sqr) for to_sqr in legal_moves]
+    else:
+        return legal_moves
+    
+
+
 
 if __name__ == "__main__":
-    #board = create_starting_position()
 
-    board = create_empty_board()
-    
-    piece = 6
-    board[square_to_index('a1')] = piece
-    board[square_to_index('f5')] = piece
-    
-    B_moves_a1 = generate_king_move(board, 'a1')
+    logging.basicConfig(level=logging.INFO)
 
-    print(f"'a1' -> {B_moves_a1}")
     board = cb.create_starting_position()
+    board = cb.create_empty_board()
 
-    a = find_pieces(board, 'w')
+    board[square_to_index('g4')] = -6
+    board[square_to_index('g2')] = 1
+
+    cb.display_board(board)
+
+    a = generate_attacked_squares(board, 'w', False)
     print(a)
-    a = generate_all_moves(board, 'w')
+
+    a = generate_pawn_attacks(board, 'g2', return_origin=False)
+    print(a)
+
+    a = generate_king_legal_move(board, 'b', return_origin=False)
     print(a)
