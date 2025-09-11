@@ -28,7 +28,7 @@ PIECE_NAMES = {
 def create_empty_board():
     return [0] * 64
 
-def create_starting_position():
+def create_starting_position() -> list:
     " Return the sarting position of a chess game as an array. "
     board = [0] * 64
     
