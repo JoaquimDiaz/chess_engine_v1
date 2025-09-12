@@ -11,7 +11,6 @@ PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING = (
     cb.WHITE_QUEEN, cb.WHITE_KING
 )
 
-
 def generate_pawn_move(board, square, skip_validation=False, return_origin=True) -> list[tuple[str, str]] | list[str]:
     file = square[0]
     rank = int(square[1])
@@ -400,7 +399,7 @@ def find_king(board: list, color: str) -> str:
         
 def generate_attacked_squares(board: list, color: str, return_origin=True) -> list[tuple[str, str]]:
     """
-    Generate all possible moves in a given position for the given piece color.
+    Generate all possible moves in a position for the given piece color.
     
     Returns:
         list of tuple with str
@@ -446,9 +445,22 @@ def generate_king_legal_move(board: list, color: str, return_origin=True) -> lis
         return [(king_square, to_sqr) for to_sqr in legal_moves]
     else:
         return legal_moves
+
+def generate_all_moves(board: list, color: str, return_origin: bool = True) -> list:
     
-
-
+    MOVE_GENERATOR = {
+        PAWN : generate_pawn_move,
+        KNIGHT : generate_knight_move,
+        BISHOP : generate_bishop_move,
+        ROOK : generate_rook_move,
+        QUEEN : generate_queen_move,
+        KING : generate_king_move
+    }
+    
+    available_moves: list = []
+    player_pieces: list = find_pieces()
+    
+    
 
 if __name__ == "__main__":
 

@@ -1,16 +1,21 @@
-import chess_board
-import move_generation
-from move_generation import find_king, find_pieces, generate_all_moves
+import chess_board as cb
+import move_generation as mv
 import logging
 
 logger = logging.getLogger(__name__)
 
+PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING = (
+    cb.WHITE_PAWN, cb.WHITE_KNIGHT,
+    cb.WHITE_BISHOP, cb.WHITE_ROOK,
+    cb.WHITE_QUEEN, cb.WHITE_KING
+)
+
 def make_move(board: list, move: tuple[str, str]) -> list:
     new_board = board.copy()
-    piece = board[chess_board.square_to_index(move[0])] 
+    piece = board[cb.square_to_index(move[0])] 
 
-    new_board[chess_board.square_to_index(move[0])] = chess_board.EMPTY_SQUARE
-    new_board[chess_board.square_to_index(move[1])] = piece
+    new_board[cb.square_to_index(move[0])] = cb.EMPTY_SQUARE
+    new_board[cb.square_to_index(move[1])] = piece
 
     return new_board
 
@@ -18,16 +23,18 @@ def generate_legal_moves(board: list, color: str):
     """
     ?? Generating all possible moves and then filtering with king safety considerations ?
     """
-    king_square: str = find_king(board, color)
+    king_square: str = mv.find_king(board, color)
     checking_pieces, pinned_pieces = analyze_king_safety(board, king_square)
     
     if checking_pieces:
         handle_checks(board, color, king_square, checking_pieces)
 
-    all_moves = generate_all_moves(board, color)    
+    all_moves = mv.generate_all_moves(board, color)    
 
     print(checking_pieces)
     print(pinned_pieces)
+
+    ...
 
 def handle_checks(board:list, colors: str, king_square: str, checking_pieces: set):
     nb_check = len(checking_pieces)
@@ -53,9 +60,9 @@ def handle_checks(board:list, colors: str, king_square: str, checking_pieces: se
 def analyze_king_safety(board: list, king_square: str) -> tuple[set, set]:
     file = king_square[0]
     rank = int(king_square[1])
-    piece = board[chess_board.square_to_index(king_square)]
+    piece = board[cb.square_to_index(king_square)]
     
-    if abs(piece) != chess_board.WHITE_KING:
+    if abs(piece) != KING:
         raise ValueError(f"Can't check for pin/check, piece is not a king: '{piece}'")
 
     color = 'w' if piece > 0 else 'b'
@@ -88,9 +95,9 @@ def directional_check(board: list, file: str, rank: int, color: str, file_delta:
     friendly_piece: str = None
 
     if rank_delta == 0 or file_delta == 0:
-        threatening_pieces = [chess_board.WHITE_ROOK, chess_board.WHITE_QUEEN]
+        threatening_pieces = [ROOK, QUEEN]
     else:
-        threatening_pieces = [chess_board.WHITE_BISHOP, chess_board.WHITE_QUEEN]
+        threatening_pieces = [BISHOP, QUEEN]
     
     i: int = 0
     while True:
@@ -103,10 +110,10 @@ def directional_check(board: list, file: str, rank: int, color: str, file_delta:
             break
         
         sqr: str = f"{chr(next_file)}{next_rank}"
-        piece_on_board: int = board[chess_board.square_to_index(sqr)]
+        piece_on_board: int = board[cb.square_to_index(sqr)]
         
         # ------ empty square ------ #
-        if piece_on_board == chess_board.EMPTY_SQUARE:
+        if piece_on_board == cb.EMPTY_SQUARE:
             continue
 
         # ------ friendly piece ------- #
@@ -133,7 +140,7 @@ def directional_check(board: list, file: str, rank: int, color: str, file_delta:
 
 def knight_check(board: list, color: str, file: str, rank: int):
     c = ord(file)
-    threatening_piece: int = chess_board.WHITE_KNIGHT if color == 'b' else chess_board.BLACK_KNIGHT
+    threatening_piece: int = cb.WHITE_KNIGHT if color == 'b' else cb.BLACK_KNIGHT
 
     squares_to_check: list = [
         f"{chr(c + 1)}{rank + 2}",
@@ -148,7 +155,7 @@ def knight_check(board: list, color: str, file: str, rank: int):
 
     for sqr in squares_to_check:
         try:
-            piece_on_board = board[chess_board.square_to_index(sqr)]
+            piece_on_board = board[cb.square_to_index(sqr)]
             if piece_on_board == threatening_piece:
                 return sqr
         except (ValueError, IndexError):
@@ -157,8 +164,8 @@ def knight_check(board: list, color: str, file: str, rank: int):
     return None        
 
 if __name__ == "__main__":
-    #board = chess_board.create_empty_board()
-    board = chess_board.create_starting_position()
+    #board = cb.create_empty_board()
+    board = cb.create_starting_position()
     
     board = make_move(board, ('e2', 'e4'))
     board = make_move(board, ('e7', 'e5'))
@@ -168,27 +175,27 @@ if __name__ == "__main__":
     board = make_move(board, ('g2', 'g3'))
     board = make_move(board, ('h4', 'g3'))
     
-    chess_board.pretty_display_board(board)
+    cb.pretty_display_board(board)
     
     moves = generate_legal_moves(board, 'w')
 
     print(moves)
     
     quit()
-    piece_list = find_pieces(board, 'w')
+    piece_list = mv.find_pieces(board, 'w')
     print(piece_list)
     
-    board[chess_board.square_to_index('e4')] = 6
+    board[cb.square_to_index('e4')] = 6
 
-    board[chess_board.square_to_index('e5')] = 4
+    board[cb.square_to_index('e5')] = 4
 
-    board[chess_board.square_to_index('h7')] = -3
+    board[cb.square_to_index('h7')] = -3
 
-    board[chess_board.square_to_index('f5')] = 3
+    board[cb.square_to_index('f5')] = 3
 
-    board[chess_board.square_to_index('e8')] = -4
+    board[cb.square_to_index('e8')] = -4
 
-    board[chess_board.square_to_index('f6')] = -2
+    board[cb.square_to_index('f6')] = -2
 
     checking_pieces, pinned_pieces = analyze_king_safety(board, 'e4')
 
