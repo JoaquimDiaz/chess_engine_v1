@@ -4,3 +4,5 @@ pyproject.toml
 *__pycache__
 *toto.py
 .pytest_cache
+dump.py
+test.py
