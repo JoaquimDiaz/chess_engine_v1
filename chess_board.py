@@ -1,45 +1,38 @@
+import config
 import logging
 
 logger = logging.getLogger(__name__)
 
-EMPTY_SQUARE = 0
-WHITE_PAWN, BLACK_PAWN = 1, -1
-WHITE_KNIGHT, BLACK_KNIGHT = 2, -2
-WHITE_BISHOP, BLACK_BISHOP = 3, -3
-WHITE_ROOK, BLACK_ROOK = 4, -4
-WHITE_QUEEN, BLACK_QUEEN = 5, -5
-WHITE_KING, BLACK_KING = 6, -6
-
 PIECE_SYMBOLS = {
-    EMPTY_SQUARE: "·",
-    WHITE_PAWN: "♙",
-    BLACK_PAWN: "♟",
-    WHITE_KNIGHT: "♘",
-    BLACK_KNIGHT: "♞",
-    WHITE_BISHOP: "♗",
-    BLACK_BISHOP: "♝",
-    WHITE_ROOK: "♖",
-    BLACK_ROOK: "♜",
-    WHITE_QUEEN: "♕",
-    BLACK_QUEEN: "♛",
-    WHITE_KING: "♔",
-    BLACK_KING: "♚",
+    config.EMPTY_SQUARE: "·",
+    config.WHITE_PAWN: "♙",
+    config.BLACK_PAWN: "♟",
+    config.WHITE_KNIGHT: "♘",
+    config.BLACK_KNIGHT: "♞",
+    config.WHITE_BISHOP: "♗",
+    config.BLACK_BISHOP: "♝",
+    config.WHITE_ROOK: "♖",
+    config.BLACK_ROOK: "♜",
+    config.WHITE_QUEEN: "♕",
+    config.BLACK_QUEEN: "♛",
+    config.WHITE_KING: "♔",
+    config.BLACK_KING: "♚",
 }
 
 PIECE_NAMES = {
-    0: ".",
-    1: "P",
-    -1: "p",
-    2: "N",
-    -2: "n",
-    3: "B",
-    -3: "b",
-    4: "R",
-    -4: "r",
-    5: "Q",
-    -5: "q",
-    6: "K",
-    -6: "k",
+    config.EMPTY_SQUARE: ".",
+    config.WHITE_PAWN: "P",
+    config.BLACK_PAWN: "p",
+    config.WHITE_KNIGHT: "N",
+    config.BLACK_KNIGHT: "n",
+    config.WHITE_BISHOP: "B",
+    config.BLACK_BISHOP: "b",
+    config.WHITE_ROOK: "R",
+    config.BLACK_ROOK: "r",
+    config.WHITE_QUEEN: "Q",
+    config.BLACK_QUEEN: "q",
+    config.WHITE_KING: "K",
+    config.BLACK_KING: "k",
 }
 
 
@@ -52,29 +45,29 @@ def create_starting_position() -> list[int]:
     board = [0] * 64
 
     board[0:8] = [
-        WHITE_ROOK,
-        WHITE_KNIGHT,
-        WHITE_BISHOP,
-        WHITE_QUEEN,
-        WHITE_KING,
-        WHITE_BISHOP,
-        WHITE_KNIGHT,
-        WHITE_ROOK,
+        config.WHITE_ROOK,
+        config.WHITE_KNIGHT,
+        config.WHITE_BISHOP,
+        config.WHITE_QUEEN,
+        config.WHITE_KING,
+        config.WHITE_BISHOP,
+        config.WHITE_KNIGHT,
+        config.WHITE_ROOK,
     ]
 
-    board[8:16] = [WHITE_PAWN] * 8
+    board[8:16] = [config.WHITE_PAWN] * 8
 
-    board[48:56] = [BLACK_PAWN] * 8
+    board[48:56] = [config.BLACK_PAWN] * 8
 
     board[56:64] = [
-        BLACK_ROOK,
-        BLACK_KNIGHT,
-        BLACK_BISHOP,
-        BLACK_QUEEN,
-        BLACK_KING,
-        BLACK_BISHOP,
-        BLACK_KNIGHT,
-        BLACK_ROOK,
+        config.BLACK_ROOK,
+        config.BLACK_KNIGHT,
+        config.BLACK_BISHOP,
+        config.BLACK_QUEEN,
+        config.BLACK_KING,
+        config.BLACK_BISHOP,
+        config.BLACK_KNIGHT,
+        config.BLACK_ROOK,
     ]
 
     return board
@@ -111,37 +104,44 @@ def pretty_display_board(board: list[int]) -> None:
     print("   a b c d e f g h")
 
 
-def parse_color(board: list[int], square: str) -> str:
-    piece = board[square_to_index(square)]
-    if piece == 0:
-        raise ValueError(f"Square '{square}' is not a piece.")
-    return "w" if piece > 0 else "b"
-
-
 def parse_square(square: str) -> tuple[int, int]:
-    """Parse a classical chess square 'a1' into two int (file, rank)"""
+    """
+    Parse a classical chess square 'a1' into two int (file, rank).
+
+    The returned coordinates range from 1 to 8 included.
+    ex:
+        - parse_square('a1') -> (1,1)
+        - parse_square('h8') -> (8,8)
+    """
     return ord(square[0]) - 96, int(square[1])
 
 
-def parse_coordinates(file: int, rank: int) -> str:
+def parse_index(index: int) -> tuple[int, int]:
+    """
+    Parse the board: list[int] index into two ints (file, rank).
+
+    The returned coordinates range from 1 to 8 included.
+    ex:
+        - parse_index(0) -> (1,1)
+        - parse_index(63) -> (8,8)
+    """
+    file: int = index % 8 + 1
+    rank: int = index // 8 + 1
+    return file, rank
+
+
+def parse_coordinates_to_idx(file: int, rank: int) -> int:
+    """
+    Parse coordinates back into the board index of those coordinates eg. 0 for (1, 1)
+    """
+    return (file - 1) + (rank - 1) * 8
+
+
+def parse_coordinates_to_sqr(file: int, rank: int) -> str:
     """
     Parse coordinates back into a chess square eg. 'a1' for (1, 1)
     """
     return f"{chr(file + 96)}{rank}"
-
-
-def is_rook_aligned(sqr1: str, sqr2: str) -> bool:
-    """Check if two pieces are rook aligned, meaning on the same row or rank"""
-    f1, r1 = parse_square(sqr1)
-    f2, r2 = parse_square(sqr2)
-    return (f1 == f2) or (r1 == r2)
-
-
-def is_on_same_diagonal(sqr1: str, sqr2: str) -> bool:
-    """Check if two pieces are on the same diagonal"""
-    f1, r1 = parse_square(sqr1)
-    f2, r2 = parse_square(sqr2)
-    return abs(f1 - r1) == abs(f2 - r2)
 
 
 def square_to_index(square: str, skip_validation: bool = False) -> int:
@@ -189,8 +189,84 @@ def validate_square(square: str) -> None:
         raise ValueError("Rank must be a number from 1 to 8")
 
 
+def is_square_aligned(sqr1: str, sqr2: str) -> bool:
+    """Check if two pieces are rook aligned, meaning on the same row or rank using the chess square"""
+    f1, r1 = parse_square(sqr1)
+    f2, r2 = parse_square(sqr2)
+    return (f1 == f2) or (r1 == r2)
+
+
+def is_index_aligned(idx1: int, idx2: int) -> bool:
+    """Check if two pieces are rook aligned, meaning on the same row or rank using the board: list[int] index"""
+    f1, r1 = parse_index(idx1)
+    f2, r2 = parse_index(idx2)
+    return (f1 == f2) or (r1 == r2)
+
+
+def is_square_on_diagonal(sqr1: str, sqr2: str) -> bool:
+    """Check if two pieces are on the same diagonal using the chess square"""
+    f1, r1 = parse_square(sqr1)
+    f2, r2 = parse_square(sqr2)
+    return abs(f1 - f2) == abs(r1 - r2)
+
+
+def is_index_on_diagonal(idx1: int, idx2: int) -> bool:
+    """Check if two pieces are on the same diagonal using the board: list[int] index"""
+    f1, r1 = parse_index(idx1)
+    f2, r2 = parse_index(idx2)
+    return abs(f1 - f2) == abs(r1 - r2)
+
+
+def find_pieces(
+    board: list[int],
+) -> config.BoardState:
+    """ """
+    w_pieces: list[int] = []
+    w_idx: list[int] = []
+    b_pieces: list[int] = []
+    b_idx: list[int] = []
+    w_king_idx = -1
+    b_king_idx = -1
+
+    for square_idx, piece in enumerate(board):
+        if piece > 0:
+            if piece == config.WHITE_KING:
+                w_king_idx = square_idx
+            w_pieces.append(piece)
+            w_idx.append(square_idx)
+
+        elif piece < 0:
+            if piece == config.BLACK_KING:
+                b_king_idx = square_idx
+            b_pieces.append(piece)
+            b_idx.append(square_idx)
+
+    if w_king_idx == -1 or b_king_idx == -1:
+        raise ValueError("A king is missing from the board")
+
+    return (
+        w_pieces,
+        w_idx,
+        b_pieces,
+        b_idx,
+        w_king_idx,
+        b_king_idx,
+    )
+
+
 if __name__ == "__main__":
     board = create_starting_position()
+
+    a = parse_index(0)
+    print(a)
+    b = parse_index(63)
+    print(b)
+
+    c = parse_coordinates_to_idx(1, 1)
+    print(c)
+
+    d = parse_coordinates_to_idx(8, 8)
+    print(d)
 
     print(is_on_same_diagonal("a1", "h8"))
     print(is_on_same_diagonal("a1", "f8"))

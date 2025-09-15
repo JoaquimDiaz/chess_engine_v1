@@ -1,7 +1,6 @@
 import chess_board as cb
 import move_generation as mv
 import game_logic as gl
-import toto
 import config
 import logging
 from typing import Literal
@@ -20,7 +19,7 @@ def generate_legal_moves(board: list[int], color: Literal[1, 0]) -> list[str]:
     move_list: list[str] = []
 
     # Tuple with pieces position on the board
-    board_state = toto.find_pieces(board)
+    board_state = cb.find_pieces(board)
 
     # 2 Lists with checking and pinned pieces in the position
     if color == config.WHITE:
@@ -50,4 +49,3 @@ def find_best_move(board: list[int], color: int) -> list[int]:
 
 if __name__ == "__main__":
     main()
-
