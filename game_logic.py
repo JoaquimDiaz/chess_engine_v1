@@ -6,72 +6,55 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def make_move(board: list[int], move: tuple[str, str]) -> list[int]:
-    new_board = board.copy()
-    piece = board[cb.square_to_index(move[0])]
-
-    new_board[cb.square_to_index(move[0])] = config.EMPTY_SQUARE
-    new_board[cb.square_to_index(move[1])] = piece
-
-    return new_board
-
-
-def generate_legal_moves(board: list[int], color: str):
-    """
-    ?? Generating all possible moves and then filtering with king safety considerations ?
-    """
-    king_square: str = mv.find_king(board, color)
-    checking_pieces, pinned_pieces = analyze_king_safety(board, king_square)
-
-    if checking_pieces:
-        handle_checks(board, color, king_square, checking_pieces)
-
-    all_moves = mv.generate_all_moves(board, color)
-
-    print(checking_pieces)
-    print(pinned_pieces)
-
+def generate_pseudo_legal_moves(
+    board: list[int], color: int, board_state: config.BoardState
+) -> tuple[list[tuple[int, int]], list[list[int]]]:
+    """ """
     ...
 
 
-def handle_checks(board: list[int], king_square: str, checking_pieces: list[str]):
-    nb_check = len(checking_pieces)
-    # Raise error if no checking pieces in set
-    if nb_check == 0:
-        raise ValueError("No checking pieces in set")
+def generate_legal_moves(
+    board: list[int],
+    color: int,
+    board_state: config.BoardState,
+    checking_pieces: list[tuple[int, int]] | None,
+    pinned_pieces: list[tuple[int, int]] | None,
+    castle_right: bool,
+) -> tuple[list[tuple[int, int]], list[list[int]]]:
+    """ """
+    # pseudo_legal_move_list = generate_pseudo_legal_moves(board, color, board_state)
+    MOVE_GENERATOR = {
+        config.PAWN: mv.generate_pawn_moves,
+        config.KNIGHT: mv.generate_knight_moves,
+        config.BISHOP: mv.generate_bishop_moves,
+        config.ROOK: mv.generate_rook_moves,
+        config.QUEEN: mv.generate_queen_moves,
+        config.KING: mv.generate_king_moves,
+    }
 
-    # Handle case where 1 piece is checking the king
-    # - You can move the king, take the checking piece or block the check
-    elif nb_check == 1:
-        king_file = king_square[0]
-        king_rank = int(king_square[1])
+    piece_list, idx_list = (0, 1) if color == config.WHITE else (2, 3)
 
-        if checking_pieces:
-            ...
-
-    # Handle case where more than 1 piece is checking the king.
-    # - The king has to move
-    elif nb_check > 1:
-        # generate_king_moves()
-        ...
+    for piece, idx in zip(board_state[piece_list], board_state[idx_list]):
+        list_of_moves = MOVE_GENERATOR[piece](board, idx)
 
 
 def analyze_king_safety(
-    board: list[int], king_square_idx: int
-) -> tuple[set[str], set[str]]:
-    """ """
-    king_square = cb.index_to_square(king_square_idx)
-    file = king_square[0]
-    rank = int(king_square[1])
-    piece = board[cb.square_to_index(king_square)]
+    board: list[int], king_square_idx: int, color: int
+) -> tuple[list[tuple[int, int]], list[tuple[int, int]]]:
+    """
+    Scan for checking pieces and pinned pieces.
 
-    if abs(piece) != config.KING:
-        raise ValueError(f"Can't check for pin/check, piece is not a king: '{piece}'")
+    Returns (checking_pieces, pinned_pieces) where each is either a list of tuple or none.
+    The tuples inside the list contains (piece, idx).
+    """
+    if abs(board[king_square_idx]) != config.KING:
+        raise ValueError(
+            "Can't check for pin/check, piece is not a king: '%i'",
+            board[king_square_idx],
+        )
 
-    color = config.WHITE if piece > 0 else config.BLACK
-
-    checking_pieces: set[str] = set()
-    pinned_pieces: set[str] = set()
+    checking_pieces: list[tuple[int, int]] = []
+    pinned_pieces: list[tuple[int, int]] = []
 
     directions = [
         # files
@@ -86,28 +69,40 @@ def analyze_king_safety(
         (-1, -1),
     ]
 
-    for file_delta, rank_delta in directions:
+    # ------ SLIDING PIECES ------ #
+    for direction in directions:
         checking_piece, pinned_piece = directional_check(
-            board, file, rank, color, file_delta, rank_delta
+            board, king_square_idx, color, direction
         )
-        if checking_piece:
-            checking_pieces.add(checking_piece)
-        if pinned_piece:
-            pinned_pieces.add(pinned_piece)
+        if checking_piece is not None:
+            checking_pieces.append(checking_piece)
+        if pinned_piece is not None:
+            pinned_pieces.append(pinned_piece)
 
-    knight_threat = knight_check(board, color, file, rank)
-    if knight_threat:
-        checking_pieces.add(knight_threat)
+    # ------ KNIGHT CHECK ------ #
+    knight_threat = knight_check(board, color, king_square_idx)
+    if knight_threat is not None:
+        checking_pieces.append(knight_threat)
 
-    return checking_pieces, pinned_pieces
+    return (checking_pieces, pinned_pieces)
 
 
 def directional_check(
-    board: list[int], file: str, rank: int, color: int, file_delta: int, rank_delta: int
-) -> tuple[str | None, str | None]:
-    c: int = ord(file)
-    checking_piece: str | None = None
-    friendly_piece: str | None = None
+    board: list[int], idx: int, color: int, direction: tuple[int, int]
+) -> tuple[tuple[int, int] | None, tuple[int, int] | None]:
+    """
+    Scan from `idx` in `direction` and identify:
+    - a checking sliding ennemy piece
+    - a pinned friendly piece
+
+    Returns (checking_piece, pinned_piece) where each is either a (piece, idx) tuple or None.
+    """
+    file, rank = cb.parse_index(idx)
+
+    file_delta = direction[0]
+    rank_delta = direction[1]
+
+    friendly_piece_idx: int | None = None
 
     if rank_delta == 0 or file_delta == 0:
         threatening_pieces = [config.ROOK, config.QUEEN]
@@ -118,68 +113,89 @@ def directional_check(
     while True:
         i += 1
 
-        next_file: int = c + (i * file_delta)
+        next_file: int = file + (i * file_delta)
         next_rank: int = rank + (i * rank_delta)
 
-        if next_rank > 8 or next_rank < 1 or next_file > 104 or next_file < 97:
+        if not (1 <= next_file <= 8 and 1 <= next_rank <= 8):
             break
 
-        sqr: str = f"{chr(next_file)}{next_rank}"
-        piece_on_board: int = board[cb.square_to_index(sqr)]
+        piece_index = cb.parse_coordinates_to_idx(next_file, next_rank)
+        piece_on_board = board[piece_index]
 
-        # ------ empty square ------ #
+        # ------ EMPTY SQUARE ------ #
+        ## If square is empty, move to next square
         if piece_on_board == config.EMPTY_SQUARE:
             continue
 
-        # ------ friendly piece ------- #
+        # ------ FRIENDLY PIECE ------- #
+        ## If a friendly piece is encountered, check if a friendly piece as already been encountered.
         elif (piece_on_board > 0 and color == config.WHITE) or (
             piece_on_board < 0 and color == config.BLACK
         ):
-            if friendly_piece:
+            ## If this is the case, break the loop because there will not be a pin.
+            if friendly_piece_idx is not None:
                 break
-            if not friendly_piece:
-                friendly_piece = sqr
+            ## Else add the square index to the varriable friendly_piece.
+            if friendly_piece_idx is None:
+                friendly_piece_idx = piece_index
                 continue
 
-        # ------ ennemy piece ------ #
-        ## threatening piece
+        # ------ ENNEMY PIECE ------ #
+        ## If a "threatening piece" is encountered, check:
         elif abs(piece_on_board) in threatening_pieces:
-            if not friendly_piece:
-                checking_piece = sqr
-                return checking_piece, friendly_piece
-            if friendly_piece:
-                return checking_piece, friendly_piece
-        ## non-threatening piece
-        else:
-            break
+            ## - If there is no friendly_piece then checking_piece
+            if friendly_piece_idx is None:
+                checking_piece = piece_on_board
+                return (checking_piece, piece_index), None
+            ## - If there is a friendly_piece then pinned_piece
+            else:
+                pinned_piece = board[friendly_piece_idx]
+                return None, (pinned_piece, friendly_piece_idx)
+
+        ## ------ NON-THREATENING ENNEMY PIECE ------ #
+        break
 
     return None, None
 
 
-def knight_check(board: list[int], color: int, file: str, rank: int) -> str | None:
-    c = ord(file)
+def knight_check(board: list[int], color: int, king_idx: int) -> tuple[int, int] | None:
+    """
+    Scan possible square for knight checks. If the file or rank is out of bound,
+    skip and go to the next coordinates.
+
+    Returns:
+        - tuple[int, int] if a knight is found (piece, piece_idx) eg. (2, 8)
+        - None if no Knight is found at those coordinates
+    """
+    file, rank = cb.parse_index(king_idx)
+
     threatening_piece: int = (
         config.WHITE_KNIGHT if color == config.BLACK else config.BLACK_KNIGHT
     )
 
-    squares_to_check: list[str] = [
-        f"{chr(c + 1)}{rank + 2}",
-        f"{chr(c - 1)}{rank + 2}",
-        f"{chr(c + 1)}{rank - 2}",
-        f"{chr(c - 1)}{rank - 2}",
-        f"{chr(c + 2)}{rank + 1}",
-        f"{chr(c - 2)}{rank + 1}",
-        f"{chr(c + 2)}{rank - 1}",
-        f"{chr(c - 2)}{rank - 1}",
+    coordinate_list: list[tuple[int, int]] = [
+        (1, 2),
+        (-1, 2),
+        (1, -2),
+        (-1, -2),
+        (2, 1),
+        (-2, 1),
+        (2, -1),
+        (-2, -1),
     ]
 
-    for sqr in squares_to_check:
-        try:
-            piece_on_board = board[cb.square_to_index(sqr)]
-            if piece_on_board == threatening_piece:
-                return sqr
-        except (ValueError, IndexError):
-            pass
+    for file_delta, rank_delta in coordinate_list:
+        file_to_scan = file + file_delta
+        rank_to_scan = rank + rank_delta
+
+        if not (1 <= file_to_scan <= 8 and 1 <= rank_to_scan <= 8):
+            continue
+
+        else:
+            piece_idx = cb.parse_coordinates_to_idx(file_to_scan, rank_to_scan)
+            piece = board[piece_idx]
+            if piece == threatening_piece:
+                return (piece, piece_idx)
 
     return None
 

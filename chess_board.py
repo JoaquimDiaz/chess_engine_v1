@@ -267,8 +267,3 @@ if __name__ == "__main__":
 
     d = parse_coordinates_to_idx(8, 8)
     print(d)
-
-    print(is_on_same_diagonal("a1", "h8"))
-    print(is_on_same_diagonal("a1", "f8"))
-    print(is_rook_aligned("e4", "h8"))
-    print(is_rook_aligned("e4", "e8"))
