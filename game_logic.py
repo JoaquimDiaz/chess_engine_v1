@@ -19,7 +19,8 @@ def generate_legal_moves(
     board_state: config.BoardState,
     checking_pieces: list[tuple[int, int]] | None,
     pinned_pieces: list[tuple[int, int]] | None,
-    castle_right: bool,
+    castle_king_side_right: bool,
+    castle_queen_side_right: bool,
 ) -> tuple[list[tuple[int, int]], list[list[int]]]:
     """ """
     # pseudo_legal_move_list = generate_pseudo_legal_moves(board, color, board_state)
@@ -32,10 +33,31 @@ def generate_legal_moves(
         config.KING: mv.generate_king_moves,
     }
 
+    # At least 2 checking pieces ? The king as to move
+    # -> return (king, king_legal_moves) immediately
+    if checking_pieces is not None and len(checking_pieces) > 1:
+        king = (
+            (config.WHITE_KING, board_state[4])
+            if color == config.WHITE
+            else (config.BLACK_KING, board_state[5])
+        )
+        return (king, mv.generate_king_legal_moves(board, board_state, color))
+
+    # Else we generate `pseudo_legal_moves`
+    piece_and_position: list[tuple[int, int]] = []
+    list_of_moves: list[list[int]] = []
+
+    pieces_position = board_state[:4]
+
     piece_list, idx_list = (0, 1) if color == config.WHITE else (2, 3)
 
-    for piece, idx in zip(board_state[piece_list], board_state[idx_list]):
+    for piece, idx in zip(pieces_position[piece_list], pieces_position[idx_list]):
         list_of_moves = MOVE_GENERATOR[piece](board, idx)
+
+    return (piece_and_position, list_of_moves)
+
+
+def analyze_castling_rights(): ...
 
 
 def analyze_king_safety(

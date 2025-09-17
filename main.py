@@ -40,6 +40,7 @@ def generate_legal_moves(board: list[int], color: Literal[1, 0]) -> list[str]:
 
 
 def find_best_move(board: list[int], color: int) -> list[int]:
+    gl.analyze_king_safety()
     best_move = evaluate_minmax(board, move_list, color)
 
     new_board = make_move(board, best_move)
