@@ -51,13 +51,31 @@ def generate_legal_moves(
 
     piece_list, idx_list = (0, 1) if color == config.WHITE else (2, 3)
 
+    if checking_pieces is not None and len(checking_pieces) == 1:
+        # If 1 single check generate and filter moves.
+        ## add a check for piece check ?
+        generate_moves_for_check()
+        ...
+
     for piece, idx in zip(pieces_position[piece_list], pieces_position[idx_list]):
-        list_of_moves = MOVE_GENERATOR[piece](board, idx)
+        if pinned_pieces is not None and (piece, idx) in pinned_pieces:
+            # check if aligned/on_diagonal and generate the moves
+            handle_pinned_piece()
+        else:
+            list_of_moves.extend(MOVE_GENERATOR[piece](board, idx))
+
+    list_of_moves.extend(analyze_castling_rights())
 
     return (piece_and_position, list_of_moves)
 
 
+def handle_pinned_piece(): ...
+
+
 def analyze_castling_rights(): ...
+
+
+def generate_moves_for_check(): ...
 
 
 def analyze_king_safety(
