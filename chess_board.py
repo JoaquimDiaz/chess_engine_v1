@@ -1,38 +1,64 @@
-import config
+from dataclasses import dataclass
 import logging
+
+from config import (
+    PieceMoves,
+    CastlingState,
+    WHITE,
+    BLACK,
+    EMPTY_SQUARE,
+    PAWN,
+    KNIGHT,
+    BISHOP,
+    ROOK,
+    QUEEN,
+    KING,
+    WHITE_PAWN,
+    WHITE_KNIGHT,
+    WHITE_BISHOP,
+    WHITE_ROOK,
+    WHITE_QUEEN,
+    WHITE_KING,
+    BLACK_PAWN,
+    BLACK_KNIGHT,
+    BLACK_BISHOP,
+    BLACK_ROOK,
+    BLACK_QUEEN,
+    BLACK_KING,
+)
 
 logger = logging.getLogger(__name__)
 
 PIECE_SYMBOLS = {
-    config.EMPTY_SQUARE: "·",
-    config.WHITE_PAWN: "♙",
-    config.BLACK_PAWN: "♟",
-    config.WHITE_KNIGHT: "♘",
-    config.BLACK_KNIGHT: "♞",
-    config.WHITE_BISHOP: "♗",
-    config.BLACK_BISHOP: "♝",
-    config.WHITE_ROOK: "♖",
-    config.BLACK_ROOK: "♜",
-    config.WHITE_QUEEN: "♕",
-    config.BLACK_QUEEN: "♛",
-    config.WHITE_KING: "♔",
-    config.BLACK_KING: "♚",
+    EMPTY_SQUARE: "·",
+    WHITE_PAWN: "♙",
+    BLACK_PAWN: "♟",
+    WHITE_KNIGHT: "♘",
+    BLACK_KNIGHT: "♞",
+    WHITE_BISHOP: "♗",
+    BLACK_BISHOP: "♝",
+    WHITE_ROOK: "♖",
+    BLACK_ROOK: "♜",
+    WHITE_QUEEN: "♕",
+    BLACK_QUEEN: "♛",
+    WHITE_KING: "♔",
+    BLACK_KING: "♚",
 }
 
 PIECE_NAMES = {
-    config.EMPTY_SQUARE: ".",
-    config.WHITE_PAWN: "P",
-    config.BLACK_PAWN: "p",
-    config.WHITE_KNIGHT: "N",
-    config.BLACK_KNIGHT: "n",
-    config.WHITE_BISHOP: "B",
-    config.BLACK_BISHOP: "b",
-    config.WHITE_ROOK: "R",
-    config.BLACK_ROOK: "r",
-    config.WHITE_QUEEN: "Q",
-    config.BLACK_QUEEN: "q",
-    config.WHITE_KING: "K",
-    config.BLACK_KING: "k",
+    EMPTY_SQUARE: ".",
+    WHITE_PAWN: "P",
+    BLACK_PAWN: "p",
+    WHITE_KNIGHT: "N",
+    BLACK_KNIGHT: "n",
+    WHITE_BISHOP: "B",
+    BLACK_BISHOP: "b",
+    WHITE_ROOK: "R",
+    BLACK_ROOK: "r",
+    WHITE_QUEEN: "Q",
+    BLACK_QUEEN: "q",
+    WHITE_KING: "K",
+    BLACK_KING: "k",
 }
 
 
@@ -45,29 +71,29 @@ def create_starting_position() -> list[int]:
     board = [0] * 64
 
     board[0:8] = [
-        config.WHITE_ROOK,
-        config.WHITE_KNIGHT,
-        config.WHITE_BISHOP,
-        config.WHITE_QUEEN,
-        config.WHITE_KING,
-        config.WHITE_BISHOP,
-        config.WHITE_KNIGHT,
-        config.WHITE_ROOK,
+        WHITE_ROOK,
+        WHITE_KNIGHT,
+        WHITE_BISHOP,
+        WHITE_QUEEN,
+        WHITE_KING,
+        WHITE_BISHOP,
+        WHITE_KNIGHT,
+        WHITE_ROOK,
     ]
 
-    board[8:16] = [config.WHITE_PAWN] * 8
+    board[8:16] = [WHITE_PAWN] * 8
 
-    board[48:56] = [config.BLACK_PAWN] * 8
+    board[48:56] = [BLACK_PAWN] * 8
 
     board[56:64] = [
-        config.BLACK_ROOK,
-        config.BLACK_KNIGHT,
-        config.BLACK_BISHOP,
-        config.BLACK_QUEEN,
-        config.BLACK_KING,
-        config.BLACK_BISHOP,
-        config.BLACK_KNIGHT,
-        config.BLACK_ROOK,
+        BLACK_ROOK,
+        BLACK_KNIGHT,
+        BLACK_BISHOP,
+        BLACK_QUEEN,
+        BLACK_KING,
+        BLACK_BISHOP,
+        BLACK_KNIGHT,
+        BLACK_ROOK,
     ]
 
     return board
@@ -219,7 +245,7 @@ def is_index_on_diagonal(idx1: int, idx2: int) -> bool:
 
 def find_pieces(
     board: list[int],
-) -> config.BoardState:
+) -> tuple[list[int], list[int], list[int], list[int], int, int]:
     """ """
     w_pieces: list[int] = []
     w_idx: list[int] = []
@@ -230,13 +256,13 @@ def find_pieces(
 
     for square_idx, piece in enumerate(board):
         if piece > 0:
-            if piece == config.WHITE_KING:
+            if piece == WHITE_KING:
                 w_king_idx = square_idx
             w_pieces.append(piece)
             w_idx.append(square_idx)
 
         elif piece < 0:
-            if piece == config.BLACK_KING:
+            if piece == BLACK_KING:
                 b_king_idx = square_idx
             b_pieces.append(piece)
             b_idx.append(square_idx)
@@ -254,16 +280,37 @@ def find_pieces(
     )
 
 
+@dataclass
+class BoardState:
+    w_pieces: list[int]
+    w_idx: list[int]
+    b_pieces: list[int]
+    b_idx: list[int]
+    w_king_idx: int
+    b_king_idx: int
+
+    @classmethod
+    def from_board(cls, board: list[int]) -> "BoardState":
+        piece_data = find_pieces(board)
+        return cls(
+            w_pieces=piece_data[0],
+            w_idx=piece_data[1],
+            b_pieces=piece_data[2],
+            b_idx=piece_data[3],
+            w_king_idx=piece_data[4],
+            b_king_idx=piece_data[5],
+        )
+
+    def get_color_state(self, color: int) -> tuple[list[int], list[int], int]:
+        if color == WHITE:
+            return (board_state.w_pieces, board_state.w_idx, board_state.w_king_idx)
+        else:
+            return (board_state.b_pieces, board_state.b_idx, board_state.b_king_idx)
+
+
 if __name__ == "__main__":
     board = create_starting_position()
 
-    a = parse_index(0)
-    print(a)
-    b = parse_index(63)
-    print(b)
+    board_state = BoardState.from_board(board)
 
-    c = parse_coordinates_to_idx(1, 1)
-    print(c)
-
-    d = parse_coordinates_to_idx(8, 8)
-    print(d)
+    print(board_state)
