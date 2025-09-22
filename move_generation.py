@@ -1,437 +1,583 @@
-from typing import Literal
 import chess_board as cb
-import config
 import logging
+
+from config import (
+    Piece,
+    PieceMoves,
+    CastlingState,
+    WHITE,
+    BLACK,
+    EMPTY_SQUARE,
+    PAWN,
+    KNIGHT,
+    BISHOP,
+    ROOK,
+    QUEEN,
+    KING,
+    WHITE_KING,
+    BLACK_KING,
+)
 
 logger = logging.getLogger(__name__)
 
 
 def generate_pawn_moves(
-    board: list[int],
-    square: str,
-) -> list[str]:
+    board: list[int], square_idx: int, color: int, en_passant_target: int | None = None
+) -> list[int]:
     """
     Generating a list of valid moves for a pawn.
 
-    Arguments:
-        - board: 64 integer list representing the board
-        - square: eg. 'a2' where the pawn is
+    - If pawns are on their initial square, check for 2 moves.
+    - Check diagonal squares for captures
+    - en_passant_target if there is an opportunity for en passant capture
+
+    Returns:
+    - list[int] corresponding to board idx.
     """
-    file = square[0]
-    rank = int(square[1])
-    piece = board[cb.square_to_index(square)]
-
-    color = config.WHITE if piece > 0 else config.BLACK
-
-    # Promotion if pawn is on last rank
-    if (color == config.WHITE and rank == 8) or (color == config.BLACK and rank == 1):
-        return []
-
-    available_squares: list[str] = []
+    file, rank = cb.parse_index(square_idx)
+    available_squares: list[int] = []
+    rank_delta: int = 1 if color == WHITE else -1
 
     # ------ PAWN MOVES ------ #
-    sqr1 = f"{file}{rank + 1}" if color == config.WHITE else f"{file}{rank - 1}"
-    idx1 = cb.square_to_index(sqr1)
-    if board[idx1] == 0:
-        available_squares.append(sqr1)
+
+    idx1 = cb.parse_coordinates_to_idx(file, rank + rank_delta)
+    if board[idx1] == EMPTY_SQUARE:
+        available_squares.append(idx1)
 
         # If pawns are on their initial square allow to move two squares
-        if (color == config.WHITE and rank == 2) or (
-            color == config.BLACK and rank == 7
-        ):
-            sqr2 = f"{file}{rank + 2}" if color == config.WHITE else f"{file}{rank - 2}"
-            idx2 = cb.square_to_index(sqr2)
-            if board[idx2] == 0:
-                available_squares.append(sqr2)
+        if (color == WHITE and rank == 2) or (color == BLACK and rank == 7):
+            idx2 = cb.parse_coordinates_to_idx(file, rank + rank_delta * 2)
+            if board[idx2] == EMPTY_SQUARE:
+                available_squares.append(idx2)
+    # -> return a flag for `en passant` when pawn moves two squares ?
 
     # ------ PAWN CAPTURES ------ #
 
     # creating a list of available files
-    c: int = ord(file)
-    files: list[str] = []
 
-    if c != ord("h"):
-        files.append(chr(c + 1))
-
-    if c != ord("a"):
-        files.append(chr(c - 1))
-
-    # defining rank up or down from color
-    rank_capture: int = rank + 1 if color == config.WHITE else rank - 1
-
-    capturable_squares = [f"{f}{rank_capture}" for f in files]
-
-    # adding squares to availables squares if there is an ennemy piece
-    for s in capturable_squares:
-        board_square = board[cb.square_to_index(s)]
-        if (board_square < 0 and color == config.WHITE) or (
-            board_square > 0 and color == config.BLACK
-        ):
-            available_squares.append(s)
-
-    return available_squares
-
-
-def generate_knight_moves(
-    board: list[int],
-    square: str,
-) -> list[str]:
-    """ """
-    file = square[0]
-    rank = int(square[1])
-    c = ord(file)
-    piece = board[cb.square_to_index(square)]
-    color = config.WHITE if piece > 0 else config.BLACK
-
-    potential_squares: list[str] = []
-    available_squares: list[str] = []
-
-    potential_squares.append(f"{chr(c + 1)}{rank + 2}")
-    potential_squares.append(f"{chr(c - 1)}{rank + 2}")
-    potential_squares.append(f"{chr(c + 1)}{rank - 2}")
-    potential_squares.append(f"{chr(c - 1)}{rank - 2}")
-    potential_squares.append(f"{chr(c + 2)}{rank + 1}")
-    potential_squares.append(f"{chr(c - 2)}{rank + 1}")
-    potential_squares.append(f"{chr(c + 2)}{rank - 1}")
-    potential_squares.append(f"{chr(c - 2)}{rank - 1}")
-
-    for s in potential_squares:
-        try:
-            idx = cb.square_to_index(s)
-            if color == config.WHITE and board[idx] <= 0:
-                available_squares.append(s)
-            if color == config.BLACK and board[idx] >= 0:
-                available_squares.append(s)
-        except (ValueError, IndexError):
+    new_rank: int = rank + rank_delta
+    for file_delta in (1, -1):
+        new_file: int = file + file_delta
+        if new_file > 8 or new_file < 1:
             continue
-    else:
-        return available_squares
-
-
-def generate_rook_moves(board: list[int], square: str) -> list[str]:
-    """ """
-    file = square[0]
-    rank = int(square[1])
-    c = ord(file)
-    piece = board[cb.square_to_index(square)]
-
-    color = config.WHITE if piece > 0 else config.BLACK
-
-    available_squares: list[str] = []
-
-    ## Left
-    i = 0
-    while c + i > 97:
-        i -= 1
-        sqr = f"{chr(c + i)}{rank}"
-        piece_on_sqr = board[cb.square_to_index(sqr)]
-        if piece_on_sqr == 0:
-            available_squares.append(sqr)
-        elif (piece_on_sqr < 0 and color == config.WHITE) or (
-            piece_on_sqr > 0 and color == config.BLACK
+        s_idx = cb.parse_coordinates_to_idx(new_file, new_rank)
+        piece_on_board = board[s_idx]
+        # en_passant_target? -> check if its the same as the pawn capture
+        if en_passant_target is not None and en_passant_target == s_idx:
+            available_squares.append(s_idx)
+        elif (piece_on_board < 0 and color == WHITE) or (
+            piece_on_board > 0 and color == BLACK
         ):
-            available_squares.append(sqr)
-            break
-        else:
-            break
-    ## Right
-    i = 0
-    while c + i < 104:
-        i += 1
-        sqr = f"{chr(c + i)}{rank}"
-        piece_on_sqr = board[cb.square_to_index(sqr)]
-        if piece_on_sqr == 0:
-            available_squares.append(sqr)
-        elif (piece_on_sqr < 0 and color == config.WHITE) or (
-            piece_on_sqr > 0 and color == config.BLACK
-        ):
-            available_squares.append(sqr)
-            break
-        else:
-            break
-
-    ## up
-    i = 0
-    while rank + i < 8:
-        i += 1
-        sqr = f"{file}{rank + i}"
-        piece_on_sqr = board[cb.square_to_index(sqr)]
-        if piece_on_sqr == 0:
-            available_squares.append(sqr)
-        elif (piece_on_sqr < 0 and color == config.WHITE) or (
-            piece_on_sqr > 0 and color == config.BLACK
-        ):
-            available_squares.append(sqr)
-            break
-        else:
-            break
-
-    ## down
-    i = 0
-    while rank + i > 1:
-        i -= 1
-        sqr = f"{file}{rank + i}"
-        piece_on_sqr = board[cb.square_to_index(sqr)]
-        if piece_on_sqr == 0:
-            available_squares.append(sqr)
-        elif (piece_on_sqr < 0 and color == config.WHITE) or (
-            piece_on_sqr > 0 and color == config.BLACK
-        ):
-            available_squares.append(sqr)
-            break
-        else:
-            break
+            available_squares.append(s_idx)
 
     return available_squares
 
 
-def generate_bishop_moves(board: list[int], square: str) -> list[str]:
-    """ """
-    file = square[0]
-    rank = int(square[1])
-    c = ord(file)
-    piece = board[cb.square_to_index(square)]
-
-    available_squares: list[str] = []
-
-    color = config.WHITE if piece > 0 else config.BLACK
-
-    # up-right
-    x, y = 0, 0
-    while c + x < 104 and rank + y < 8:
-        x += 1
-        y += 1
-
-        sqr = f"{chr(c + x)}{rank + y}"
-        piece_on_sqr = board[cb.square_to_index(sqr)]
-
-        if piece_on_sqr == 0:
-            available_squares.append(sqr)
-
-        elif (piece_on_sqr < 0 and color == config.WHITE) or (
-            piece_on_sqr > 0 and color == config.BLACK
-        ):
-            available_squares.append(sqr)
-            break
-
-        else:
-            break
-
-    # up-left
-    x, y = 0, 0
-    while c + x > 97 and rank + y < 8:
-        x -= 1
-        y += 1
-
-        sqr = f"{chr(c + x)}{rank + y}"
-        piece_on_sqr = board[cb.square_to_index(sqr)]
-
-        if piece_on_sqr == 0:
-            available_squares.append(sqr)
-
-        elif (piece_on_sqr < 0 and color == config.WHITE) or (
-            piece_on_sqr > 0 and color == config.BLACK
-        ):
-            available_squares.append(sqr)
-            break
-
-        else:
-            break
-
-    # down-left
-    x, y = 0, 0
-    while c + x > 97 and rank + y > 1:
-        x -= 1
-        y -= 1
-
-        sqr = f"{chr(c + x)}{rank + y}"
-        piece_on_sqr = board[cb.square_to_index(sqr)]
-
-        if piece_on_sqr == 0:
-            available_squares.append(sqr)
-
-        elif (piece_on_sqr < 0 and color == config.WHITE) or (
-            piece_on_sqr > 0 and color == config.BLACK
-        ):
-            available_squares.append(sqr)
-            break
-
-        else:
-            break
-
-    # down-right
-    x, y = 0, 0
-    while c + x < 104 and rank + y > 1:
-        x += 1
-        y -= 1
-
-        sqr = f"{chr(c + x)}{rank + y}"
-        piece_on_sqr = board[cb.square_to_index(sqr)]
-
-        if piece_on_sqr == 0:
-            available_squares.append(sqr)
-
-        elif (piece_on_sqr < 0 and color == config.WHITE) or (
-            piece_on_sqr > 0 and color == config.BLACK
-        ):
-            available_squares.append(sqr)
-            break
-
-        else:
-            break
-
-    return available_squares
-
-
-def generate_pawn_attacks(board: list[int], square: str) -> list[str]:
+def generate_pawn_controlled_squares(
+    board: list[int], square_idx: int, color: int
+) -> list[int]:
     """
-    Generate the list of squares attacked by a pawn.
+    Generate attacked squares for a pawn, 1 or 2 diagonal squares.
     """
-    file, rank = cb.parse_square(square)
-    attacked_squares: list[str] = []
-    color = config.WHITE if board[cb.square_to_index(square)] > 0 else config.BLACK
+    file, rank = cb.parse_index(square_idx)
+    attacked_squares: list[int] = []
 
-    new_rank = rank + 1 if color == config.WHITE else rank - 1
+    rank_delta = 1 if color == WHITE else -1
+    new_rank = rank + rank_delta
 
     for file_delta in (1, -1):
         new_file = file + file_delta
-        if 1 <= new_file <= 8 and 1 <= new_rank <= 8:
-            attacked_squares.append(cb.parse_coordinates(new_file, new_rank))
+        if new_file > 8 or new_file < 1:
+            continue
+        s_idx = cb.parse_coordinates_to_idx(new_file, new_rank)
+        attacked_squares.append(s_idx)
 
     return attacked_squares
 
 
-def generate_queen_moves(
-    board: list[int],
-    square: str,
-) -> list[str]:
+def generate_knight_moves(board: list[int], square_idx: int, color: int) -> list[int]:
+    """ """
+    file, rank = cb.parse_index(square_idx)
+
+    available_squares: list[int] = []
+
+    coordinate_list: list[tuple[int, int]] = [
+        (1, 2),
+        (-1, 2),
+        (1, -2),
+        (-1, -2),
+        (2, 1),
+        (-2, 1),
+        (2, -1),
+        (-2, -1),
+    ]
+
+    for coordinate in coordinate_list:
+        file_delta, rank_delta = coordinate
+        new_file = file + file_delta
+        new_rank = rank + rank_delta
+
+        if (new_file > 8 or new_file < 1) or (new_rank > 8 or new_rank < 1):
+            continue
+
+        idx = cb.parse_coordinates_to_idx(new_file, new_rank)
+
+        target_square = board[idx]
+
+        if (
+            target_square == EMPTY_SQUARE
+            or (target_square < 0 and color == WHITE)
+            or (target_square > 0 and color == BLACK)
+        ):
+            available_squares.append(idx)
+
+    return available_squares
+
+
+def generate_knight_controlled_squares(
+    board: list[int], square_idx: int, color: int
+) -> list[int]:
+    """
+    Generate a list of controlled squares for a knight.
+    - `EMPTY_SQUARE`
+    - Same color piece (for generating legal king move)
+    - Ennemy pieces are not added to conrolled squares
+        -> ennemy king cant capture them
+    """
+    file, rank = cb.parse_index(square_idx)
+
+    attacked_squares: list[int] = []
+
+    coordinate_list: list[tuple[int, int]] = [
+        (1, 2),
+        (-1, 2),
+        (1, -2),
+        (-1, -2),
+        (2, 1),
+        (-2, 1),
+        (2, -1),
+        (-2, -1),
+    ]
+
+    for coordinate in coordinate_list:
+        file_delta, rank_delta = coordinate
+        new_file = file + file_delta
+        new_rank = rank + rank_delta
+
+        if (new_file > 8 or new_file < 1) or (new_rank > 8 or new_rank < 1):
+            continue
+
+        idx = cb.parse_coordinates_to_idx(new_file, new_rank)
+        piece_on_board = board[idx]
+
+        if piece_on_board == EMPTY_SQUARE:
+            attacked_squares.append(idx)
+
+        elif (piece_on_board > 0 and color == WHITE) or (
+            piece_on_board < 0 and color == BLACK
+        ):
+            attacked_squares.append(idx)
+
+        else:
+            continue
+
+    return attacked_squares
+
+
+def generate_rook_moves(board: list[int], square_idx: int, color: int) -> list[int]:
+    """ """
+    file, rank = cb.parse_index(square_idx)
+    available_squares: list[int] = []
+
+    directions = [(1, 0), (0, 1), (-1, 0), (0, -1)]
+
+    for file_delta, rank_delta in directions:
+        i = 1
+        while True:
+            new_file = file + (i * file_delta)
+            new_rank = rank + (i * rank_delta)
+
+            if new_file > 8 or new_file < 1 or new_rank > 8 or new_rank < 1:
+                break
+
+            next_square: int = cb.parse_coordinates_to_idx(new_file, new_rank)
+            piece_on_square: int = board[next_square]
+
+            if piece_on_square == EMPTY_SQUARE:
+                available_squares.append(next_square)
+                i += 1
+
+            elif (color == WHITE and piece_on_square < 0) or (
+                color == BLACK and piece_on_square > 0
+            ):
+                available_squares.append(next_square)
+                break
+
+            else:
+                break
+
+    return available_squares
+
+
+def generate_rook_controlled_squares(
+    board: list[int], square_idx: int, color: int
+) -> list[int]:
+    """ """
+    file, rank = cb.parse_index(square_idx)
+    attacked_squares: list[int] = []
+
+    directions = [(1, 0), (0, 1), (-1, 0), (0, -1)]
+
+    for file_delta, rank_delta in directions:
+        i = 1
+        while True:
+            new_file = file + (i * file_delta)
+            new_rank = rank + (i * rank_delta)
+
+            if new_file > 8 or new_file < 1 or new_rank > 8 or new_rank < 1:
+                break
+
+            next_square: int = cb.parse_coordinates_to_idx(new_file, new_rank)
+            piece_on_square: int = board[next_square]
+
+            if piece_on_square == EMPTY_SQUARE:
+                attacked_squares.append(next_square)
+                i += 1
+
+            elif (piece_on_square == BLACK_KING and color == WHITE) or (
+                piece_on_square == WHITE_KING and color == BLACK
+            ):
+                attacked_squares.append(next_square)
+                i += 1
+                continue
+
+            elif (color == WHITE and piece_on_square < 0) or (
+                color == BLACK and piece_on_square > 0
+            ):
+                break
+
+            else:
+                attacked_squares.append(next_square)
+                break
+
+    return attacked_squares
+
+
+def generate_bishop_moves(board: list[int], square_idx: int, color: int) -> list[int]:
+    """ """
+    file, rank = cb.parse_index(square_idx)
+    available_squares: list[int] = []
+
+    directions: list[tuple[int, int]] = [(1, 1), (-1, 1), (1, -1), (-1, -1)]
+
+    for file_delta, rank_delta in directions:
+        i = 1
+        while True:
+            next_file = file + (i * file_delta)
+            next_rank = rank + (i * rank_delta)
+
+            if next_file < 1 or next_file > 8 or next_rank < 1 or next_rank > 8:
+                break
+
+            next_square = cb.parse_coordinates_to_idx(next_file, next_rank)
+            piece_on_board: int = board[next_square]
+
+            if piece_on_board == EMPTY_SQUARE:
+                available_squares.append(next_square)
+                i += 1
+
+            elif (color == WHITE and piece_on_board < 0) or (
+                color == BLACK and piece_on_board > 0
+            ):
+                available_squares.append(next_square)
+                break
+
+            else:
+                break
+
+    return available_squares
+
+
+def generate_bishop_controlled_squares(
+    board: list[int], square_idx: int, color: int
+) -> list[int]:
+    """ """
+    file, rank = cb.parse_index(square_idx)
+    attacked_squares: list[int] = []
+
+    directions: list[tuple[int, int]] = [(1, 1), (-1, 1), (1, -1), (-1, -1)]
+
+    for file_delta, rank_delta in directions:
+        i = 1
+        while True:
+            next_file = file + (i * file_delta)
+            next_rank = rank + (i * rank_delta)
+
+            if next_file < 1 or next_file > 8 or next_rank < 1 or next_rank > 8:
+                break
+
+            next_square = cb.parse_coordinates_to_idx(next_file, next_rank)
+            piece_on_board: int = board[next_square]
+
+            if piece_on_board == EMPTY_SQUARE:
+                attacked_squares.append(next_square)
+                i += 1
+
+            elif (piece_on_board == BLACK_KING and color == WHITE) or (
+                piece_on_board == WHITE_KING and color == BLACK
+            ):
+                attacked_squares.append(next_square)
+                i += 1
+                continue
+                # ennemy king? Add the square behind him
+                # next_file = file + (i * file_delta)
+                # next_rank = rank + (i * rank_delta)
+                # next_square = cb.parse_coordinates_to_idx(next_file, next_rank)
+                # attacked_squares.append(next_square)
+                # break
+
+            elif (color == WHITE and piece_on_board < 0) or (
+                color == BLACK and piece_on_board > 0
+            ):
+                break
+
+            else:
+                attacked_squares.append(next_square)
+                break
+
+    return attacked_squares
+
+
+def generate_queen_moves(board: list[int], square_idx: int, color: int) -> list[int]:
     """
     Generate the list of available squares for a queen.
     Using the 2 functions to generate moves for the rook and the bishop.
     """
-    move_list: list[str] = []
+    move_list: list[int] = []
 
-    move_list.extend(generate_bishop_moves(board, square))
-    move_list.extend(generate_rook_moves(board, square))
+    move_list.extend(generate_bishop_moves(board, square_idx, color))
+    move_list.extend(generate_rook_moves(board, square_idx, color))
 
     return move_list
 
 
-def generate_king_moves(board: list[int], square_idx: int) -> list[str]:
-    square = cb.index_to_square(square_idx)
-    file = square[0]
-    rank = int(square[1])
-    c = ord(file)
-    piece = board[cb.square_to_index(square)]
-    potential_squares: list[str] = []
-    available_squares: list[str] = []
+def generate_queen_controlled_squares(
+    board: list[int], square_idx: int, color: int
+) -> list[int]:
+    """ """
+    attacked_squares: list[int] = []
 
-    color = config.WHITE if piece > 0 else config.BLACK
-
-    potential_squares.append(f"{chr(c - 1)}{rank}")
-    potential_squares.append(f"{chr(c + 1)}{rank}")
-    potential_squares.append(f"{chr(c - 1)}{rank + 1}")
-    potential_squares.append(f"{chr(c - 1)}{rank - 1}")
-    potential_squares.append(f"{chr(c + 1)}{rank + 1}")
-    potential_squares.append(f"{chr(c + 1)}{rank - 1}")
-    potential_squares.append(f"{file}{rank + 1}")
-    potential_squares.append(f"{file}{rank - 1}")
-
-    for s in potential_squares:
-        try:
-            piece_on_board = board[cb.square_to_index(s)]
-            if piece_on_board == 0:
-                available_squares.append(s)
-            elif (piece_on_board < 0 and color == config.WHITE) or (
-                piece_on_board > 0 and color == config.BLACK
-            ):
-                available_squares.append(s)
-            else:
-                pass
-        except (ValueError, IndexError):
-            pass
-
-    return available_squares
-
-
-def generate_attacked_squares(board: list[int], color: Literal[1, 0]) -> list[str]:
-    """
-    Generate all possible moves in a position for the given piece color.
-
-    Returns:
-        list of tuple with str
-    """
-    MOVE_GENERATOR = {
-        config.PAWN: generate_pawn_attacks,
-        config.KNIGHT: generate_knight_moves,
-        config.BISHOP: generate_bishop_moves,
-        config.ROOK: generate_rook_moves,
-        config.QUEEN: generate_queen_moves,
-        config.KING: generate_king_moves,
-    }
-
-    color_pieces: list = find_pieces(board, color)
-    attacked_squares: list = []
-
-    for piece, square in color_pieces:
-        generator = MOVE_GENERATOR[abs(piece)]
-        attacked_squares.extend(generator(board, square))
+    attacked_squares.extend(generate_rook_controlled_squares(board, square_idx, color))
+    attacked_squares.extend(
+        generate_bishop_controlled_squares(board, square_idx, color)
+    )
 
     return attacked_squares
 
 
+def generate_king_moves(board: list[int], square_idx: int, color: int) -> list[int]:
+    """ """
+    file, rank = cb.parse_index(square_idx)
+
+    available_squares: list[int] = []
+
+    directions: list[tuple[int, int]] = [
+        (1, 0),
+        (0, 1),
+        (1, 1),
+        (-1, 0),
+        (0, -1),
+        (-1, 1),
+        (1, -1),
+        (-1, -1),
+    ]
+
+    for file_delta, rank_delta in directions:
+        next_file = file + file_delta
+        next_rank = rank + rank_delta
+
+        if next_file < 1 or next_file < 8 or next_rank < 1 or next_rank > 8:
+            continue
+
+        next_square = cb.parse_coordinates_to_idx(next_file, next_rank)
+        piece_on_board = board[next_square]
+
+        if piece_on_board == EMPTY_SQUARE:
+            available_squares.append(next_square)
+
+        elif (color == WHITE and piece_on_board < 0) or (
+            color == BLACK and piece_on_board > 0
+        ):
+            available_squares.append(next_square)
+
+        else:
+            continue
+
+    return available_squares
+
+
+def generate_king_controlled_squares(
+    board: list[int], square_idx: int, color: int
+) -> list[int]:
+    """ """
+    file, rank = cb.parse_index(square_idx)
+
+    attacked_squares: list[int] = []
+
+    directions: list[tuple[int, int]] = [
+        (1, 0),
+        (0, 1),
+        (1, 1),
+        (-1, 0),
+        (0, -1),
+        (-1, 1),
+        (1, -1),
+        (-1, -1),
+    ]
+
+    for file_delta, rank_delta in directions:
+        next_file = file + file_delta
+        next_rank = rank + rank_delta
+
+        if next_file < 1 or next_file > 8 or next_rank < 1 or next_rank > 8:
+            continue
+
+        next_square = cb.parse_coordinates_to_idx(next_file, next_rank)
+        piece_on_board = board[next_square]
+
+        if piece_on_board == EMPTY_SQUARE:
+            attacked_squares.append(next_square)
+
+        elif (color == WHITE and piece_on_board < 0) or (
+            color == BLACK and piece_on_board > 0
+        ):
+            continue
+
+        else:
+            attacked_squares.append(next_square)
+
+    return attacked_squares
+
+
+MOVE_GENERATOR = {
+    KNIGHT: generate_knight_moves,
+    BISHOP: generate_bishop_moves,
+    ROOK: generate_rook_moves,
+    QUEEN: generate_queen_moves,
+}
+
+CONTROLLED_GENERATOR = {
+    PAWN: generate_pawn_controlled_squares,
+    KNIGHT: generate_knight_controlled_squares,
+    BISHOP: generate_bishop_controlled_squares,
+    ROOK: generate_rook_controlled_squares,
+    QUEEN: generate_queen_controlled_squares,
+    KING: generate_king_controlled_squares,
+}
+
+
+def generate_controlled_squares(
+    board: list[int], color: int, piece_list: list[int], idx_list: list[int]
+) -> set[int]:
+    """
+    Generate controlled squares for a given color.
+
+    Returns:
+
+    """
+    controlled_squares: set[int] = set()
+
+    for piece, idx in zip(piece_list, idx_list):
+        controlled_squares.update(CONTROLLED_GENERATOR[abs(piece)](board, idx, color))
+
+    return controlled_squares
+
+
 def generate_king_legal_moves(
     board: list[int],
-    board_state: config.BoardState,
-    color: Literal[1, 0],
-) -> list[str]:
-    """
-    Generate legal moves for the king by filtering with the list of square controlled by the opponent pieces.
-    """
-    legal_moves: list[str] = []
-    king_idx = board_state[4] if color == config.WHITE else board_state[5]
-    available_moves: list[str] = generate_king_moves(board, king_idx)
+    color: int,
+    king_square: int,
+    ennemy_controlled: set[int],
+) -> list[int]:
+    """ """
+    king_legal_moves: list[int] = []
+    king_pseudo_legal = generate_king_moves(board, king_square, color)
 
-    opponent_color: int = config.BLACK if color == config.WHITE else config.WHITE
-    attacked_squares = set(generate_attacked_squares(board, opponent_color))
+    for square_idx in king_pseudo_legal:
+        if square_idx not in ennemy_controlled:
+            king_legal_moves.append(square_idx)
 
-    for s in available_moves:
-        if s not in attacked_squares:
-            legal_moves.append(s)
-
-    return legal_moves
+    return king_legal_moves
 
 
-def generate_all_moves(board: list, color: str, return_origin: bool = True) -> list:
-    MOVE_GENERATOR = {
-        PAWN: generate_pawn_move,
-        KNIGHT: generate_knight_move,
-        BISHOP: generate_bishop_move,
-        ROOK: generate_rook_move,
-        QUEEN: generate_queen_move,
-        KING: generate_king_move,
-    }
+def generate_castling_moves(
+    board: list[int], king_square: int, color: int, castling_state: CastlingState
+) -> list[int]:
+    """ """
+    king_side: bool = castling_state.can_castle_kingside(color)
+    queen_side: bool = castling_state.can_castle_queenside(color)
 
-    available_moves: list = []
-    player_pieces: list = find_pieces()
+    castling_moves: list[int] = []
 
+    if not (king_side or queen_side):
+        return []
+
+    if king_side:
+        ...
+    if queen_side:
+        ...
+
+    return castling_moves
+
+
+def generate_pseudolegal_moves(
+    board: list[int],
+    color: int,
+    piece_list: list[int],
+    idx_list: list[int],
+    king_square: int,
+    castling_state: CastlingState,
+    ennemy_controlled: set[int],
+    en_passant_target: int | None = None,
+) -> PieceMoves:
+    """ """
+    piece_moves = PieceMoves()
+
+    for piece, idx in zip(piece_list, idx_list):
+        if abs(piece) == PAWN:
+            moves = generate_pawn_moves(board, idx, color, en_passant_target)
+        elif abs(piece) == KING:
+            moves = generate_king_legal_moves(board, color, king_square, ennemy_controlled)
+            moves.extend(
+                generate_castling_moves(board, king_square, color, castling_state)
+            )
+        else:
+            moves = MOVE_GENERATOR[abs(piece)](board, idx, color)
+
+        piece_moves.pieces.append(Piece(piece, idx))
+        piece_moves.move_list.append(moves)
+
+    return piece_moves
+
+
+def generate_moves_filter_pinned(
+    board: list[int],
+    color: int,
+    board_state: cb.BoardState,
+    pinned_pieces: list[tuple[int, int]],
+    en_passant_target: int | None = None
+) -> PieceMoves:
+    """ """
+    piece_list, idx_list, king_square = board_state.get_color_state(color)
+
+    piece_moves = PieceMoves()
+
+    for piece, idx in zip(piece_list, idx_list):
+        if (piece, idx) in pinned_pieces:
+            ...
+        else:
+
+            
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-
-    board = cb.create_starting_position()
-    board = cb.create_empty_board()
-
-    board[square_to_index("g4")] = -6
-    board[square_to_index("g2")] = 1
-
-    cb.display_board(board)
-
-    a = generate_attacked_squares(board, config.WHITE, False)
-    print(a)
-
-    a = generate_pawn_attacks(board, "g2", return_origin=False)
-    print(a)
-
-    a = generate_king_legal_move(board, config.BLACK, return_origin=False)
-    print(a)
+    b = cb.create_starting_position()
