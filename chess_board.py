@@ -1,3 +1,4 @@
+from collections.abc import Iterator
 from dataclasses import dataclass
 import logging
 
@@ -59,6 +60,21 @@ PIECE_NAMES = {
     BLACK_QUEEN: "q",
     WHITE_KING: "K",
     BLACK_KING: "k",
+}
+
+FEN_CONVERSION = {
+    "P": WHITE_PAWN,
+    "p": BLACK_PAWN,
+    "N": WHITE_KNIGHT,
+    "n": BLACK_KNIGHT,
+    "B": WHITE_BISHOP,
+    "b": BLACK_BISHOP,
+    "R": WHITE_ROOK,
+    "r": BLACK_ROOK,
+    "Q": WHITE_QUEEN,
+    "q": BLACK_QUEEN,
+    "K": WHITE_KING,
+    "k": BLACK_KING,
 }
 
 
@@ -244,7 +260,7 @@ def is_index_on_diagonal(idx1: int, idx2: int) -> bool:
 
 
 def find_pieces(
-    board: list[int],
+    board: list[int], skip_validation: bool = False
 ) -> tuple[list[int], list[int], list[int], list[int], int, int]:
     """ """
     w_pieces: list[int] = []
@@ -267,7 +283,7 @@ def find_pieces(
             b_pieces.append(piece)
             b_idx.append(square_idx)
 
-    if w_king_idx == -1 or b_king_idx == -1:
+    if not skip_validation and (w_king_idx == -1 or b_king_idx == -1):
         raise ValueError("A king is missing from the board")
 
     return (
@@ -278,6 +294,40 @@ def find_pieces(
         w_king_idx,
         b_king_idx,
     )
+
+
+def parse_fen_to_board(fen: str) -> list[int]:
+    """ """
+    import re
+
+    pattern = r"^([1-8pPrRnNbBqQkK/]+) ([wb]) ([KQkq-]+) ([a-h][1-8]|-) (\d+) (\d+)$"
+    matches = re.match(pattern, fen)
+
+    if matches is None:
+        raise ValueError("Wrong fen string input")
+
+    for match in matches.groups():
+        print(match)
+
+    board_match, active_color, castling, en_passant, half_moves, full_moves = (
+        matches.groups()
+    )
+
+    ranks = board_match.split("/")
+
+    board: list[int] = []
+
+    for rank in ranks[::-1]:
+        for c in rank:
+            if c.isdigit():
+                board.extend([EMPTY_SQUARE] * int(c))
+            else:
+                board.append(FEN_CONVERSION[c])
+
+    return board
+
+
+def parse_fen_to_chess_game(fen: str): ...
 
 
 @dataclass
@@ -303,14 +353,94 @@ class BoardState:
 
     def get_color_state(self, color: int) -> tuple[list[int], list[int], int]:
         if color == WHITE:
-            return (board_state.w_pieces, board_state.w_idx, board_state.w_king_idx)
+            return (self.w_pieces, self.w_idx, self.w_king_idx)
         else:
-            return (board_state.b_pieces, board_state.b_idx, board_state.b_king_idx)
+            return (self.b_pieces, self.b_idx, self.b_king_idx)
+
+
+@dataclass
+class Square:
+    square: str | int
+
+    def __init__(self, square: str | int):
+        if isinstance(square, str):
+            return square_to_index(square)
+        else:
+            return square
+
+
+class ChessBoard:
+    def __init__(self, starting_position: bool = False):
+        self.board: list[int] = (
+            create_starting_position() if starting_position else create_empty_board()
+        )
+        self._update_board_state()
+
+    def _square_to_index(self, square: str | int) -> int:
+        if isinstance(square, int):
+            return square
+        return square_to_index(square)
+
+    def _update_board_state(self) -> None:
+        piece_data = find_pieces(self.board, skip_validation=True)
+        self.w_pieces: list[int] = piece_data[0]
+        self.w_idx: list[int] = piece_data[1]
+        self.b_pieces: list[int] = piece_data[2]
+        self.b_idx: list[int] = piece_data[3]
+        self.w_king_idx: int = piece_data[4]
+        self.b_king_idx: int = piece_data[5]
+
+    def __getitem__(self, key: str | int) -> int:
+        return self.board[self._square_to_index(key)]
+
+    def __setitem__(self, key: str | int, value: int) -> None:
+        self.board[self._square_to_index(key)] = value
+        self._update_board_state()
+
+    def __iter__(self) -> Iterator[int]:
+        return iter(self.board)
+
+    def __len__(self) -> int:
+        return 64
+
+    def make_move(self, from_square: str | int, to_square: str | int) -> None:
+        idx1 = self._square_to_index(from_square)
+        idx2 = self._square_to_index(to_square)
+
+        if self.board[idx1] == EMPTY_SQUARE:
+            raise ValueError("Trying to make a move on an EMPTY_SQUARE")
+
+        self.board[idx2] = self.board[idx1]
+        self.board[idx1] = EMPTY_SQUARE
+
+        self._update_board_state()
+
+    def display(self) -> None:
+        display_board(self.board)
+
+    def display_attributes(self) -> None:
+        print(f"board={self.board}")
+        print(f"w_pieces={self.w_pieces}")
+        print(f"w_idx={self.w_idx}")
+        print(f"b_pieces={self.b_pieces}")
+        print(f"b_idx={self.b_idx}")
+        print(f"w_king_idx={self.w_king_idx}")
+        print(f"b_king_idx={self.b_king_idx}")
+
+    def copy(self) -> "ChessBoard":
+        """Create a copy of the board"""
+        new_board = ChessBoard()
+        new_board.board = self.board.copy()
+        new_board._update_board_state()
+        return new_board
+
+    @classmethod
+    def from_fen(cls, fen: str) -> "ChessBoard":
+        board = ChessBoard()
+        board.board = parse_fen_to_board(fen)
+        board._update_board_state()
+        return board
 
 
 if __name__ == "__main__":
-    board = create_starting_position()
-
-    board_state = BoardState.from_board(board)
-
-    print(board_state)
+    ...

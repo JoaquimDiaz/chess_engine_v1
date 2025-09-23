@@ -1,10 +1,13 @@
 import chess_board as cb
+from chess_board import ChessBoard, create_empty_board, create_starting_position
 import pytest
+
+from config import WHITE_KING, BLACK_KING
 
 
 def test_create_empty_board():
     """Tests that the empty board is setup correctly"""
-    board = cb.create_empty_board()
+    board = create_empty_board()
 
     assert len(board) == 64
     assert sum(board) == 0
@@ -139,3 +142,26 @@ def test_find_pieces():
         -4,
     ]
     assert board_state[3] == [i for i in range(48, 64, 1)]
+
+
+def test_ChessBoard():
+    b1 = ChessBoard()
+    b2 = create_empty_board()
+
+    b3 = ChessBoard(starting_position=True)
+    b4 = create_starting_position()
+
+    assert b1.board == b2
+    assert b3.board == b4
+
+    with pytest.raises(ValueError):
+        b1["z8"] = WHITE_KING
+
+
+def test_fen_to_board():
+    fen_starting_board = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+
+    b1 = cb.parse_fen_to_board(fen_starting_board)
+    b2 = ChessBoard(True)
+
+    assert b1 == b2.board

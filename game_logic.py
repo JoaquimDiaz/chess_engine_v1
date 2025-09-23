@@ -1,7 +1,5 @@
-from tabnanny import check
 import chess_board as cb
 import move_generation as mv
-import config
 import logging
 
 from config import (
@@ -29,6 +27,7 @@ from config import (
     BLACK_ROOK,
     BLACK_QUEEN,
     BLACK_KING,
+    PinnedPiece,
 )
 
 logger = logging.getLogger(__name__)
@@ -36,14 +35,13 @@ logger = logging.getLogger(__name__)
 
 def analyze_king_safety(
     board: list[int], king_square_idx: int, color: int
-) -> tuple[list[Piece], list[Piece]]:
+) -> tuple[list[Piece], list[PinnedPiece]]:
     """
     Scan for checking pieces and pinned pieces.
 
     If multiple checking pieces are found at some point,
     terminate and return only the checking pieces.
     -> the king has to move so pinned pieces dont matter
-
     """
     if abs(board[king_square_idx]) != KING:
         raise ValueError(
@@ -53,7 +51,7 @@ def analyze_king_safety(
     file, rank = cb.parse_index(king_square_idx)
 
     checking_pieces: list[Piece] = []
-    pinned_pieces: list[Piece] = []
+    pinned_pieces: list[PinnedPiece] = []
     check_count: int = 0
 
     directions = [
@@ -92,7 +90,7 @@ def analyze_king_safety(
             check_count += 1
 
     if check_count > 1:
-        return (checking_pieces, [])
+        return (checking_pieces, pinned_pieces)
 
     # ------ SLIDING PIECES ------ #
 
@@ -105,7 +103,7 @@ def analyze_king_safety(
             check_count += 1
 
         if check_count > 1:
-            return (checking_pieces, [])
+            return (checking_pieces, pinned_pieces)
 
         if pinned_piece is not None:
             pinned_pieces.append(pinned_piece)
@@ -115,7 +113,7 @@ def analyze_king_safety(
 
 def directional_check(
     board: list[int], file: int, rank: int, color: int, direction: tuple[int, int]
-) -> tuple[Piece | None, Piece | None]:
+) -> tuple[Piece | None, PinnedPiece | None]:
     """
     Scan from `idx` in `direction` and identify:
     - a checking sliding ennemy piece
@@ -174,8 +172,9 @@ def directional_check(
                 return Piece(checking_piece, piece_index), None
             ## - If there is a friendly_piece then pinned_piece
             else:
-                pinned_piece = board[friendly_piece_idx]
-                return None, Piece(pinned_piece, friendly_piece_idx)
+                friendly_piece = Piece(board[friendly_piece_idx], friendly_piece_idx)
+                ennemy_piece_idx = piece_index
+                return None, PinnedPiece(friendly_piece, direction, ennemy_piece_idx)
 
         ## ------ NON-THREATENING ENNEMY PIECE ------ #
         break

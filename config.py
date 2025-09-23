@@ -74,3 +74,10 @@ class CastlingState:
         else:
             self.disable_kingside(BLACK)
             self.disable_queenside(BLACK)
+
+
+@dataclass
+class PinnedPiece:
+    piece: Piece
+    pin_vector: tuple[int, int]
+    pinning_piece_index: int

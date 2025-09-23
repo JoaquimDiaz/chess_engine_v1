@@ -16,6 +16,7 @@ from config import (
     KING,
     WHITE_KING,
     BLACK_KING,
+    PinnedPiece,
 )
 
 logger = logging.getLogger(__name__)
@@ -396,7 +397,7 @@ def generate_king_moves(board: list[int], square_idx: int, color: int) -> list[i
         next_file = file + file_delta
         next_rank = rank + rank_delta
 
-        if next_file < 1 or next_file < 8 or next_rank < 1 or next_rank > 8:
+        if next_file < 1 or next_file > 8 or next_rank < 1 or next_rank > 8:
             continue
 
         next_square = cb.parse_coordinates_to_idx(next_file, next_rank)
@@ -530,7 +531,7 @@ def generate_castling_moves(
     return castling_moves
 
 
-def generate_pseudolegal_moves(
+def generate_all_moves(
     board: list[int],
     color: int,
     piece_list: list[int],
@@ -547,7 +548,9 @@ def generate_pseudolegal_moves(
         if abs(piece) == PAWN:
             moves = generate_pawn_moves(board, idx, color, en_passant_target)
         elif abs(piece) == KING:
-            moves = generate_king_legal_moves(board, color, king_square, ennemy_controlled)
+            moves = generate_king_legal_moves(
+                board, color, king_square, ennemy_controlled
+            )
             moves.extend(
                 generate_castling_moves(board, king_square, color, castling_state)
             )
@@ -563,21 +566,100 @@ def generate_pseudolegal_moves(
 def generate_moves_filter_pinned(
     board: list[int],
     color: int,
-    board_state: cb.BoardState,
-    pinned_pieces: list[tuple[int, int]],
-    en_passant_target: int | None = None
+    piece_list: list[int],
+    idx_list: list[int],
+    king_square: int,
+    pinned_pieces: list[PinnedPiece],
+    ennemy_controlled: set[int],
+    en_passant_target: int | None = None,
 ) -> PieceMoves:
     """ """
-    piece_list, idx_list, king_square = board_state.get_color_state(color)
+    pin_lookup = {pinned.piece.index: pinned for pinned in pinned_pieces}
 
     piece_moves = PieceMoves()
 
     for piece, idx in zip(piece_list, idx_list):
-        if (piece, idx) in pinned_pieces:
-            ...
+        if abs(piece) == KING:
+            moves = generate_king_legal_moves(
+                board, color, king_square, ennemy_controlled
+            )
+        #            moves.extend(generate_castling_moves(...))
+        elif abs(piece) == PAWN:
+            moves = generate_pawn_moves(board, idx, color, en_passant_target)
+            if idx in pin_lookup:
+                moves = filter_pinned_piece_moves(moves, piece, pin_lookup[idx])
         else:
+            moves = MOVE_GENERATOR[abs(piece)](board, idx, color)
+            if idx in pin_lookup:
+                moves = filter_pinned_piece_moves(moves, piece, pin_lookup[idx])
 
-            
+        piece_moves.pieces.append(Piece(piece, idx))
+        piece_moves.move_list.append(moves)
+
+    return piece_moves
+
+
+def filter_pinned_piece_moves(
+    moves: list[int], piece: int, pinned_piece: PinnedPiece
+) -> list[int]:
+    """ """
+    pin_vector = pinned_piece.pin_vector
+    ennemy_idx = pinned_piece.pinning_piece_index
+
+    filtered_moves: list[int] = []
+
+    if abs(piece) == KNIGHT:
+        return []
+
+    elif abs(piece) == ROOK:
+        if pin_vector[0] * pin_vector[1] != 0:
+            return []
+        else:
+            for move in moves:
+                if cb.is_index_aligned(move, ennemy_idx):
+                    filtered_moves.append(move)
+
+    elif abs(piece) == BISHOP:
+        if pin_vector[0] * pin_vector[1] == 0:
+            return []
+        else:
+            for move in moves:
+                if cb.is_index_on_diagonal(move, ennemy_idx):
+                    filtered_moves.append(move)
+
+    elif abs(piece) == (QUEEN or PAWN):
+        if pin_vector[0] * pin_vector[1] == 0:
+            for move in moves:
+                if cb.is_index_aligned(move, ennemy_idx):
+                    filtered_moves.append(move)
+        else:
+            for move in moves:
+                if cb.is_index_on_diagonal(move, ennemy_idx):
+                    filtered_moves.append(move)
+
+    return filtered_moves
+
+
+def generate_single_check_moves(
+    board: list[int],
+    color: int,
+    piece_list: list[int],
+    idx_list: list[int],
+    king_square: int,
+    checking_piece: Piece,
+    pinned_pieces: list[PinnedPiece],
+    ennemy_controlled: set[int],
+    en_passant_target: int | None = None,
+) -> PieceMoves:
+    """ """
+    ...
+
+
+def generate_blocking_moves(
+    board: list[int], king_square: int, checking_piece: Piece
+) -> list[int]:
+    """ """
+
 
 if __name__ == "__main__":
     b = cb.create_starting_position()
