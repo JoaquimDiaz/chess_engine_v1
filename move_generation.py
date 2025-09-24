@@ -1,4 +1,3 @@
-from tabnanny import check
 import chess_board as cb
 import logging
 

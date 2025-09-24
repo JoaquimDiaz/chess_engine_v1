@@ -23,6 +23,23 @@ BLACK_PAWN, BLACK_KNIGHT, BLACK_BISHOP, BLACK_ROOK, BLACK_QUEEN, BLACK_KING = (
 WHITE = 1
 BLACK = 0
 
+FEN_CONVERSION = {
+    "P": WHITE_PAWN,
+    "p": BLACK_PAWN,
+    "N": WHITE_KNIGHT,
+    "n": BLACK_KNIGHT,
+    "B": WHITE_BISHOP,
+    "b": BLACK_BISHOP,
+    "R": WHITE_ROOK,
+    "r": BLACK_ROOK,
+    "Q": WHITE_QUEEN,
+    "q": BLACK_QUEEN,
+    "K": WHITE_KING,
+    "k": BLACK_KING,
+}
+
+BOARD_TO_FEN = {v: k for k, v in FEN_CONVERSION.items()}
+
 # Alias for BoardState type used in the `find_pieces` function
 # BoardState = tuple[list[int], list[int], list[int], list[int], int, int]
 
@@ -74,6 +91,29 @@ class CastlingState:
         else:
             self.disable_kingside(BLACK)
             self.disable_queenside(BLACK)
+
+    def to_fen(self) -> str:
+        fen: str = ""
+        if self.white_kingside:
+            fen += "K"
+        if self.white_queenside:
+            fen += "Q"
+        if self.black_kingside:
+            fen += "k"
+        if self.black_queenside:
+            fen += "q"
+        return fen or "-"
+
+    @classmethod
+    def from_fen(cls, fen: str) -> "CastlingState":
+        if fen == "-":
+            return cls(False, False, False, False)
+        return cls(
+            white_kingside="K" in fen,
+            white_queenside="Q" in fen,
+            black_kingside="k" in fen,
+            black_queenside="q" in fen,
+        )
 
 
 @dataclass

@@ -3,6 +3,7 @@ from dataclasses import dataclass
 import logging
 
 from config import (
+    FEN_CONVERSION,
     PieceMoves,
     CastlingState,
     WHITE,
@@ -60,21 +61,6 @@ PIECE_NAMES = {
     BLACK_QUEEN: "q",
     WHITE_KING: "K",
     BLACK_KING: "k",
-}
-
-FEN_CONVERSION = {
-    "P": WHITE_PAWN,
-    "p": BLACK_PAWN,
-    "N": WHITE_KNIGHT,
-    "n": BLACK_KNIGHT,
-    "B": WHITE_BISHOP,
-    "b": BLACK_BISHOP,
-    "R": WHITE_ROOK,
-    "r": BLACK_ROOK,
-    "Q": WHITE_QUEEN,
-    "q": BLACK_QUEEN,
-    "K": WHITE_KING,
-    "k": BLACK_KING,
 }
 
 
