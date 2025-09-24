@@ -83,6 +83,7 @@ def generate_legal_moves(
                 idx_list,
                 king_square,
                 pinned_pieces,
+                castling_state,
                 ennemy_controlled,
                 en_passant_target,
             )

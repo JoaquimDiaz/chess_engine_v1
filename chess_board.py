@@ -441,6 +441,16 @@ class ChessBoard:
         board._update_board_state()
         return board
 
+    @classmethod
+    def setup_position(cls, piece_dict: dict[str, int]):
+        board = ChessBoard()
+        for square, piece in piece_dict.items():
+            board[square] = piece
+
+        return board
+
 
 if __name__ == "__main__":
-    ...
+    b = ChessBoard.setup_position({"a1": WHITE_BISHOP, "e5": BLACK_KING})
+
+    b.display()

@@ -1,3 +1,4 @@
+from tabnanny import check
 import chess_board as cb
 import logging
 
@@ -512,7 +513,10 @@ def generate_king_legal_moves(
 
 
 def generate_castling_moves(
-    board: list[int], king_square: int, color: int, castling_state: CastlingState
+    board: list[int],
+    color: int,
+    castling_state: CastlingState,
+    ennemy_controlled: set[int],
 ) -> list[int]:
     """ """
     king_side: bool = castling_state.can_castle_kingside(color)
@@ -523,12 +527,50 @@ def generate_castling_moves(
     if not (king_side or queen_side):
         return []
 
-    if king_side:
-        ...
-    if queen_side:
-        ...
+    if king_side and is_empty_and_safe_kingside(board, color, ennemy_controlled):
+        castling_moves.append(6 if color == WHITE else 62)
+
+    if queen_side and is_empty_and_safe_queenside(board, color, ennemy_controlled):
+        castling_moves.append(2 if color == WHITE else 58)
 
     return castling_moves
+
+
+def is_empty_and_safe_kingside(
+    board: list[int], color: int, ennemy_controlled: set[int]
+) -> bool:
+    """
+    Scan for pieces and verify that squares are safe on the kingside between the king and the rook
+
+    Returns:
+        True if no piece is found or none of the squares ares attacked by ennemy pieces
+    """
+    squares_to_scan: list[int] = [5, 6] if color == WHITE else [61, 62]
+    for s in squares_to_scan:
+        if board[s] != EMPTY_SQUARE or s in ennemy_controlled:
+            return False
+
+    return True
+
+
+def is_empty_and_safe_queenside(
+    board: list[int], color: int, ennemy_controlled: set[int]
+) -> bool:
+    """
+    Scan for pieces on the queenside between the king and the rook
+
+    Returns:
+        True if no piece is found
+    """
+    squares_to_scan: list[int] = [1, 2, 3] if color == WHITE else [57, 58, 59]
+    for s in squares_to_scan:
+        if board[s] != EMPTY_SQUARE:
+            return False
+    for s in squares_to_scan[1:]:
+        if s in ennemy_controlled:
+            return False
+
+    return True
 
 
 def generate_all_moves(
@@ -552,7 +594,7 @@ def generate_all_moves(
                 board, color, king_square, ennemy_controlled
             )
             moves.extend(
-                generate_castling_moves(board, king_square, color, castling_state)
+                generate_castling_moves(board, color, castling_state, ennemy_controlled)
             )
         else:
             moves = MOVE_GENERATOR[abs(piece)](board, idx, color)
@@ -570,6 +612,7 @@ def generate_moves_filter_pinned(
     idx_list: list[int],
     king_square: int,
     pinned_pieces: list[PinnedPiece],
+    castling_state: CastlingState,
     ennemy_controlled: set[int],
     en_passant_target: int | None = None,
 ) -> PieceMoves:
@@ -583,7 +626,9 @@ def generate_moves_filter_pinned(
             moves = generate_king_legal_moves(
                 board, color, king_square, ennemy_controlled
             )
-        #            moves.extend(generate_castling_moves(...))
+            moves.extend(
+                generate_castling_moves(board, color, castling_state, ennemy_controlled)
+            )
         elif abs(piece) == PAWN:
             moves = generate_pawn_moves(board, idx, color, en_passant_target)
             if idx in pin_lookup:
@@ -652,13 +697,161 @@ def generate_single_check_moves(
     en_passant_target: int | None = None,
 ) -> PieceMoves:
     """ """
-    ...
+    allowed_squares: set[int] = set()
+
+    capturing_move = checking_piece.index
+
+    if abs(checking_piece.piece) in [KNIGHT, PAWN]:
+        allowed_squares.add(capturing_move)
+
+    else:
+        allowed_squares.add(capturing_move)
+        allowed_squares.update(
+            generate_blocking_moves(board, king_square, checking_piece)
+        )
+
+    if pinned_pieces == []:
+        return generate_single_check_no_pin_moves(
+            board,
+            color,
+            piece_list,
+            idx_list,
+            king_square,
+            ennemy_controlled,
+            allowed_squares,
+            en_passant_target,
+        )
+
+    else:
+        return generate_single_check_pinned_moves(
+            board,
+            color,
+            piece_list,
+            idx_list,
+            king_square,
+            pinned_pieces,
+            ennemy_controlled,
+            allowed_squares,
+            en_passant_target,
+        )
+
+
+def generate_single_check_no_pin_moves(
+    board: list[int],
+    color: int,
+    piece_list: list[int],
+    idx_list: list[int],
+    king_square: int,
+    ennemy_controlled: set[int],
+    allowed_squares: set[int],
+    en_passant_target: int | None = None,
+) -> PieceMoves:
+    piece_moves = PieceMoves()
+
+    for piece, idx in zip(piece_list, idx_list):
+        legal_moves: list[int] = []
+        if abs(piece) == KING:
+            moves = generate_king_legal_moves(
+                board, color, king_square, ennemy_controlled
+            )
+            piece_moves.pieces.append(Piece(piece, idx))
+            piece_moves.move_list.append(moves)
+            continue
+
+        elif abs(piece) == PAWN:
+            moves = generate_pawn_moves(board, idx, color, en_passant_target)
+
+        else:
+            moves = MOVE_GENERATOR[abs(piece)](board, idx, color)
+
+        for move in moves:
+            if move in allowed_squares:
+                legal_moves.append(move)
+
+        if legal_moves:
+            piece_moves.pieces.append(Piece(piece, idx))
+            piece_moves.move_list.append(legal_moves)
+
+    return piece_moves
+
+
+def generate_single_check_pinned_moves(
+    board: list[int],
+    color: int,
+    piece_list: list[int],
+    idx_list: list[int],
+    king_square: int,
+    pinned_pieces: list[PinnedPiece],
+    ennemy_controlled: set[int],
+    allowed_squares: set[int],
+    en_passant_target: int | None = None,
+) -> PieceMoves:
+    pin_lookup = {pinned.piece.index: pinned for pinned in pinned_pieces}
+
+    piece_moves = PieceMoves()
+
+    for piece, idx in zip(piece_list, idx_list):
+        legal_moves: list[int] = []
+        if abs(piece) == KING:
+            moves = generate_king_legal_moves(
+                board, color, king_square, ennemy_controlled
+            )
+            piece_moves.pieces.append(Piece(piece, idx))
+            piece_moves.move_list.append(moves)
+            continue
+
+        elif abs(piece) == PAWN:
+            moves = generate_pawn_moves(board, idx, color, en_passant_target)
+            if idx in pin_lookup:
+                moves = filter_pinned_piece_moves(moves, piece, pin_lookup[idx])
+
+        else:
+            moves = MOVE_GENERATOR[abs(piece)](board, idx, color)
+            if idx in pin_lookup:
+                moves = filter_pinned_piece_moves(moves, piece, pin_lookup[idx])
+
+        for move in moves:
+            if move in allowed_squares:
+                legal_moves.append(move)
+
+        if legal_moves:
+            piece_moves.pieces.append(Piece(piece, idx))
+            piece_moves.move_list.append(legal_moves)
+
+    return piece_moves
 
 
 def generate_blocking_moves(
     board: list[int], king_square: int, checking_piece: Piece
 ) -> list[int]:
     """ """
+
+    blocking_moves: list[int] = []
+
+    k_file, k_rank = cb.parse_index(king_square)
+    c_file, c_rank = cb.parse_index(checking_piece.index)
+
+    file_diff = k_file - c_file
+    rank_diff = k_rank - c_rank
+
+    f_delta = file_diff if file_diff == 0 else (1 if file_diff > 0 else -1)
+    r_delta = rank_diff if rank_diff == 0 else (1 if rank_diff > 0 else -1)
+
+    i = 1
+    while True:
+        new_file = c_file + (i * f_delta)
+        new_rank = c_rank + (i * r_delta)
+
+        if new_file < 1 or new_file > 8 or new_rank < 1 or new_rank > 8:
+            break
+
+        square = cb.parse_coordinates_to_idx(new_file, new_rank)
+        if abs(board[square]) == KING:
+            return blocking_moves
+        blocking_moves.append(square)
+        i += 1
+
+    return blocking_moves
 
 
 if __name__ == "__main__":

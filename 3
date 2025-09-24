@@ -380,8 +380,8 @@ def test_generate_blocking_moves_diagonal():
 
 
 def test_generate_blocking_moves_aligned():
-    b = ChessBoard.setup_position({"e4": WHITE_KING, "e8": BLACK_ROOK})
+    b = ChessBoard.setup_position({"e4": WHITE_KING, "e8": WHITE_ROOK})
 
-    moves = mv.generate_blocking_moves(b.board, sq("e4"), Piece(BLACK_ROOK, sq("e8")))
+    moves = mv.generate_blocking_moves(b.board, sq("a1"), Piece(BLACK_BISHOP, sq("h8")))
     assert moves != []
-    assert_move_set_equality(moves, ["e5", "e6", "e7"])
+    assert_move_set_equality(moves, ["b2", "c3", "d4", "e5", "f6", "g7"])
