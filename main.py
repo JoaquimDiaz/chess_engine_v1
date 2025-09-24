@@ -4,14 +4,24 @@ import game_logic as gl
 import config
 import logging
 
+from chess_board import ChessBoard, BoardState, create_starting_position
 from config import BLACK, WHITE, CastlingState, Piece, PieceMoves
 
 logger = logging.getLogger(__name__)
 
 
 def main():
-    board = cb.create_starting_position()
-    castling_state = config.CastlingState()
+    b = create_starting_position()
+    castling_state = CastlingState()
+    board_state = BoardState.from_board(b)
+    en_passant_target = None
+
+    moves = generate_legal_moves(
+        b, WHITE, board_state, castling_state, en_passant_target
+    )
+
+    print(moves.pieces)
+    print(moves.move_list)
 
 
 def generate_legal_moves(
@@ -95,22 +105,17 @@ def generate_legal_moves(
     # 1 checking piece? legal king moves + blocking moves
 
     else:
-        return mv.generate_single_check_moves(...)
-
-
-def find_blocking_moves(
-    board: list[int], checking_piece: tuple[int, int], king_square_idx: int, color: int
-) -> config.PieceMoves: ...
-def filter_pinned_pieces(piece_moves: config.PieceMoves) -> config.PieceMoves: ...
-
-
-def find_best_move(board: list[int], color: int) -> list[int]:
-    gl.analyze_king_safety()
-    best_move = evaluate_minmax(board, move_list, color)
-
-    new_board = make_move(board, best_move)
-
-    return new_board
+        return mv.generate_single_check_moves(
+            board,
+            color,
+            piece_list,
+            idx_list,
+            king_square,
+            checking_pieces[0],
+            pinned_pieces,
+            ennemy_controlled,
+            en_passant_target,
+        )
 
 
 if __name__ == "__main__":

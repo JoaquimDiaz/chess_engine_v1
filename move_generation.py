@@ -599,8 +599,9 @@ def generate_all_moves(
         else:
             moves = MOVE_GENERATOR[abs(piece)](board, idx, color)
 
-        piece_moves.pieces.append(Piece(piece, idx))
-        piece_moves.move_list.append(moves)
+        if moves:
+            piece_moves.pieces.append(Piece(piece, idx))
+            piece_moves.move_list.append(moves)
 
     return piece_moves
 
@@ -638,8 +639,9 @@ def generate_moves_filter_pinned(
             if idx in pin_lookup:
                 moves = filter_pinned_piece_moves(moves, piece, pin_lookup[idx])
 
-        piece_moves.pieces.append(Piece(piece, idx))
-        piece_moves.move_list.append(moves)
+        if moves:
+            piece_moves.pieces.append(Piece(piece, idx))
+            piece_moves.move_list.append(moves)
 
     return piece_moves
 
@@ -672,7 +674,7 @@ def filter_pinned_piece_moves(
                 if cb.is_index_on_diagonal(move, ennemy_idx):
                     filtered_moves.append(move)
 
-    elif abs(piece) == (QUEEN or PAWN):
+    elif abs(piece) in [QUEEN, PAWN]:
         if pin_vector[0] * pin_vector[1] == 0:
             for move in moves:
                 if cb.is_index_aligned(move, ennemy_idx):

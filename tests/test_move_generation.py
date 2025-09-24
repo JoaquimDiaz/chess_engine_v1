@@ -1,5 +1,6 @@
 import chess_board as cb
 from chess_board import BoardState, ChessBoard
+from game_logic import analyze_king_safety
 import move_generation as mv
 import pytest
 
@@ -385,3 +386,104 @@ def test_generate_blocking_moves_aligned():
     moves = mv.generate_blocking_moves(b.board, sq("e4"), Piece(BLACK_ROOK, sq("e8")))
     assert moves != []
     assert_move_set_equality(moves, ["e5", "e6", "e7"])
+
+
+def unwrap(b: ChessBoard, color: int):
+    castling_state = CastlingState()
+    castling_state.disable_all(color)
+    if color == WHITE:
+        return {
+            "board": b.board,
+            "color": color,
+            "piece_list": b.w_pieces,
+            "idx_list": b.w_idx,
+            "king_square": b.w_king_idx,
+            "castling_state": castling_state,
+            "ennemy_controlled": mv.generate_controlled_squares(
+                b.board, BLACK, b.b_pieces, b.b_idx
+            ),
+            "en_passant_target": None,
+        }
+    else:
+        return {
+            "board": b.board,
+            "color": color,
+            "piece_list": b.b_pieces,
+            "idx_list": b.b_idx,
+            "king_square": b.b_king_idx,
+            "castling_state": castling_state,
+            "ennemy_controlled": mv.generate_controlled_squares(
+                b.board, WHITE, b.w_pieces, b.w_idx
+            ),
+            "en_passant_target": None,
+        }
+
+
+def test_generate_all_moves():
+    b = ChessBoard(True)
+
+    piece_moves = mv.generate_all_moves(**unwrap(b, WHITE))  # pyright: ignore[reportArgumentType]
+
+    assert len(piece_moves.pieces) == len(piece_moves.move_list)
+    assert len(piece_moves.pieces) == 10
+
+    piece_moves = mv.generate_all_moves(**unwrap(b, BLACK))  # pyright: ignore[reportArgumentType]
+
+    assert len(piece_moves.pieces) == len(piece_moves.move_list)
+    assert len(piece_moves.pieces) == 10
+
+
+def test_generate_moves_filter_pinned():
+    b = ChessBoard.setup_position(
+        {"e1": WHITE_KING, "e8": BLACK_ROOK, "e4": WHITE_PAWN, "d5": BLACK_PAWN}
+    )
+
+    _, pinned_pieces = analyze_king_safety(b.board, b.w_king_idx, WHITE)
+
+    piece_moves = mv.generate_moves_filter_pinned(
+        **unwrap(b, WHITE),  # pyright: ignore[reportArgumentType]
+        pinned_pieces=pinned_pieces,
+    )
+
+    assert len(piece_moves.pieces) == len(piece_moves.move_list)
+    assert len(piece_moves.pieces) == 2
+
+    for piece, moves in zip(piece_moves.pieces, piece_moves.move_list):
+        if piece.piece == WHITE_KING:
+            assert_move_set_equality(moves, ["f1", "f2", "e2", "d1", "d2"])
+        if piece.piece == WHITE_PAWN:
+            assert_move_set_equality(moves, ["e5"])
+
+
+def test_generate_single_check_moves():
+    b = ChessBoard.setup_position(
+        {
+            "e1": WHITE_KING,
+            "e8": BLACK_ROOK,
+            "e4": WHITE_PAWN,
+            "d5": BLACK_PAWN,
+            "h4": BLACK_BISHOP,
+            "e2": WHITE_QUEEN,
+        }
+    )
+
+    checking_pieces, pinned_pieces = analyze_king_safety(b.board, b.w_king_idx, WHITE)
+    params = unwrap(b, WHITE)
+    _ = params.pop("castling_state")
+
+    piece_moves = mv.generate_single_check_moves(
+        **params,  # pyright: ignore[reportArgumentType]
+        checking_piece=checking_pieces[0],
+        pinned_pieces=pinned_pieces,
+    )
+
+    assert checking_pieces[0] == Piece(BLACK_BISHOP, sq("h4"))
+
+    assert len(piece_moves.pieces) == len(piece_moves.move_list)
+    assert len(piece_moves.pieces) == 2
+
+    for piece, moves in zip(piece_moves.pieces, piece_moves.move_list):
+        if piece.piece == WHITE_KING:
+            assert_move_set_equality(moves, ["f1", "d1", "d2"])
+        if piece.piece == WHITE_QUEEN:
+            assert_move_set_equality(moves, ["f2"])

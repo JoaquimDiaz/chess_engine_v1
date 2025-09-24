@@ -96,7 +96,7 @@ def analyze_king_safety(
 
     for direction in directions:
         checking_piece, pinned_piece = directional_check(
-            board, color, file, rank, direction
+            board, file, rank, color, direction
         )
         if checking_piece is not None:
             checking_pieces.append(checking_piece)
