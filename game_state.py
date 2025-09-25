@@ -6,11 +6,14 @@ from chess_board import (
     BoardState,
     create_starting_position,
     index_to_square,
+    display_board,
 )
+from game_logic import analyze_king_safety
 
 from evaluate_position import evaluate_position
 
 from config import (
+    BLACK_ROOK,
     FEN_CONVERSION,
     BOARD_TO_FEN,
     EMPTY_SQUARE,
@@ -22,6 +25,8 @@ from config import (
     CastlingState,
     Piece,
     PieceMoves,
+    WHITE_ROOK,
+    PinnedPiece,
 )
 from legal_moves import generate_legal_moves
 
@@ -51,16 +56,25 @@ class GameState:
 
         self.board_state: BoardState = BoardState.from_board(self.board)
 
+        self._update_king_safety()
+        self._update_legal_moves()
+        self._update_endgame_state()
+
     @override
     def __str__(self):
         return f"""{{
         "board": {self.board},
-        "active_color": {self.active_color},
+        "active_color": {"WHITE" if self.active_color == WHITE else "BLACK"},
         "castling_state": {self.castling_state},
         "en_passant_target": {self.en_passant_target},
         "half_moves": {self.half_moves},
-        "full_moves": {self.full_moves}
+        "full_moves": {self.full_moves},
+        "checkmate": {self.checkmate},
+        "draw": {self.draw}
     }}"""
+
+    def display(self) -> None:
+        display_board(self.board)
 
     def copy(self) -> "GameState":
         return GameState(
@@ -75,23 +89,25 @@ class GameState:
     def to_fen(self) -> str:
         return game_state_to_fen(self)
 
-    @property
-    def legal_moves(self) -> PieceMoves:
-        return generate_legal_moves(
-            self.board,
-            self.active_color,
-            self.board_state,
-            self.castling_state,
-            self.en_passant_target,
-        )
+    # @property
+    # def legal_moves(self) -> PieceMoves:
+    #    return generate_legal_moves(
+    #        self.board,
+    #        self.active_color,
+    #        self.board_state,
+    #        self.checking_pieces,
+    #        self.pinned_pieces,
+    #        self.castling_state,
+    #        self.en_passant_target,
+    #    )
 
     # ---------------------------------------------------------------------
     # MAKING A MOVE
     # ---------------------------------------------------------------------
 
-    def make_move(self, piece: Piece, move: int) -> None:
+    def make_move(self, piece: Piece, move: int, promotion: int | None = None) -> None:
         self._update_half_moves(piece, move)
-        self._update_board(piece, move)
+        self._update_board(piece, move, promotion)
         self._update_castling_state(piece)
         self._update_en_passant_target(piece, move)
 
@@ -102,9 +118,58 @@ class GameState:
 
         self.active_color = WHITE if self.active_color == BLACK else BLACK
 
-    def _update_board(self, piece: Piece, move: int) -> None:
-        self.board[piece.index] = EMPTY_SQUARE
-        self.board[move] = piece.piece
+        self._update_king_safety()
+        self._update_legal_moves()
+        self._update_endgame_state()
+
+    def _update_board(
+        self, piece: Piece, move: int, promotion: int | None = None
+    ) -> None:
+        # Special moves?
+        ## PAWN moving to last rank -> promotion
+        if promotion is not None:
+            self.board[piece.index] = EMPTY_SQUARE
+            self.board[move] = promotion
+
+        ## Castling Kingside
+        elif (
+            abs(piece.piece) == KING
+            and self.castling_state.can_castle_kingside(self.active_color)
+            and move in [62, 6]
+        ):
+            ### Mutate KING
+            self.board[piece.index] = EMPTY_SQUARE
+            self.board[move] = piece.piece
+
+            ### Mutate ROOK
+            from_idx = 7 if self.active_color == WHITE else 63
+            to_idx = 5 if self.active_color == WHITE else 61
+            self.board[from_idx] = EMPTY_SQUARE
+            self.board[to_idx] = (
+                WHITE_ROOK if self.active_color == WHITE else BLACK_ROOK
+            )
+
+        ## Castling Queenside
+        elif (
+            abs(piece.piece) == KING
+            and self.castling_state.can_castle_queenside(self.active_color)
+            and move in [58, 2]
+        ):
+            ### Mutate KING
+            self.board[piece.index] = EMPTY_SQUARE
+            self.board[move] = piece.piece
+
+            ### Mutate ROOK
+            from_idx = 0 if self.active_color == WHITE else 56
+            to_idx = 3 if self.active_color == WHITE else 59
+            self.board[from_idx] = EMPTY_SQUARE
+            self.board[to_idx] = (
+                WHITE_ROOK if self.active_color == WHITE else BLACK_ROOK
+            )
+        # Not a special move? mutate
+        else:
+            self.board[piece.index] = EMPTY_SQUARE
+            self.board[move] = piece.piece
 
     def _update_castling_state(self, piece: Piece) -> None:
         if piece.piece == abs(KING):
@@ -129,12 +194,53 @@ class GameState:
     def _update_board_state(self) -> None:
         self.board_state = BoardState.from_board(self.board)
 
+    def _update_king_safety(self) -> None:
+        active_king_idx = (
+            self.board_state.w_king_idx
+            if self.active_color == WHITE
+            else self.board_state.b_king_idx
+        )
+
+        safety = analyze_king_safety(self.board, active_king_idx, self.active_color)
+
+        self.checking_pieces: list[Piece] = safety[0]
+        self.pinned_pieces: list[PinnedPiece] = safety[1]
+
+    def _update_legal_moves(self):
+        self.legal_moves: PieceMoves = generate_legal_moves(
+            self.board,
+            self.active_color,
+            self.board_state,
+            self.checking_pieces,
+            self.pinned_pieces,
+            self.castling_state,
+            self.en_passant_target,
+        )
+
+    def _update_endgame_state(self) -> None:
+        if not self.legal_moves:
+            if self.checking_pieces != []:
+                self.checkmate: bool = True
+            else:
+                self.draw: bool = True
+        elif self.half_moves == 100:
+            self.draw = True
+        else:
+            self.checkmate = False
+            self.draw = False
+
     # ---------------------------------------------------------------------
     # POSITION EVALUATION
     # ---------------------------------------------------------------------
 
-    def evaluate(self) -> int:
-        return evaluate_position(self.board_state.w_pieces, self.board_state.b_pieces)
+    def evaluate(self) -> float:
+        return evaluate_position(
+            self.active_color,
+            self.board_state.w_pieces,
+            self.board_state.b_pieces,
+            self.checkmate,
+            self.draw,
+        )
 
     # ---------------------------------------------------------------------
     # CLASS METHOD

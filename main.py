@@ -15,10 +15,12 @@ from config import (
     CastlingState,
     Piece,
     PieceMoves,
+    BLACK_KING,
+    WHITE_ROOK,
 )
 from legal_moves import generate_legal_moves
 from game_state import GameState
-from move_selection import simple_selection
+from move_selection import simple_selection, minmax_selection
 
 logger = logging.getLogger(__name__)
 
@@ -27,22 +29,23 @@ def sq(square: str) -> int:
     return square_to_index(square)
 
 
+def find(p: int, game_state: GameState) -> None:
+    for piece, moves in zip(
+        game_state.legal_moves.pieces, game_state.legal_moves.move_list
+    ):
+        if piece.piece == p:
+            print(f"{piece}: {moves}")
+
+
 def main():
     g = GameState.from_fen(
-        "rnb1k1nr/pppp1ppp/5q2/2bNp3/4P3/8/PPPP1PPP/R1BQKBNR w KQkq - 4 4"
+        "rnb1kbnr/pppp1ppp/8/4p3/2B1P2q/5QP1/PPPP1P1P/RNB1KN1R w KQkq - 0 1"
     )
 
-    display_board(g.board)
-
-    p = generate_legal_moves(g)
-    piece, move = simple_selection(g, p)
-    print(piece, move)
-
-    display_board(g.board)
-
-    g.make_move(piece, move)
-
-    display_board(g.board)
+    print(g)
+    g.display()
+    p = minmax_selection(g, 4)
+    print(p)
 
 
 if __name__ == "__main__":

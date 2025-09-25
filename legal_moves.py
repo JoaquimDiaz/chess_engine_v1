@@ -4,7 +4,7 @@ import game_logic as gl
 import logging
 
 from chess_board import ChessBoard, BoardState, create_starting_position
-from config import BLACK, WHITE, CastlingState, Piece, PieceMoves
+from config import BLACK, WHITE, CastlingState, Piece, PieceMoves, PinnedPiece
 
 logger = logging.getLogger(__name__)
 
@@ -14,6 +14,8 @@ def generate_legal_moves(
     board: list[int],
     color: int,
     board_state: BoardState,
+    checking_pieces: list[Piece],
+    pinned_pieces: list[PinnedPiece],
     castling_state: CastlingState,
     en_passant_target: int | None = None,
 ) -> PieceMoves:
@@ -32,7 +34,6 @@ def generate_legal_moves(
     e_piece_list, e_idx_list, _ = board_state.get_color_state(ennemy_color)
 
     # Get king safety informations
-    checking_pieces, pinned_pieces = gl.analyze_king_safety(board, king_square, color)
 
     ennemy_controlled: set[int] = mv.generate_controlled_squares(
         board, ennemy_color, e_piece_list, e_idx_list
@@ -46,14 +47,15 @@ def generate_legal_moves(
     # - We return only the king legal moves
 
     if checking_pieces and len(checking_pieces) > 1:
-        return PieceMoves(
-            pieces=[Piece(board[king_square], king_square)],
-            move_list=[
-                mv.generate_king_legal_moves(
-                    board, color, king_square, ennemy_controlled
-                )
-            ],
+        legal_moves = mv.generate_king_legal_moves(
+            board, color, king_square, ennemy_controlled
         )
+        if legal_moves == []:
+            return PieceMoves()
+        else:
+            return PieceMoves(
+                pieces=[Piece(board[king_square], king_square)], move_list=[legal_moves]
+            )
 
     ###################################
     # ------ NO CHECKING PIECE ------ #

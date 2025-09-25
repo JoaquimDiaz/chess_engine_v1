@@ -43,10 +43,10 @@ def analyze_king_safety(
     terminate and return only the checking pieces.
     -> the king has to move so pinned pieces dont matter
     """
-    if abs(board[king_square_idx]) != KING:
-        raise ValueError(
-            "Can't check for pin/check, piece is not a king",
-        )
+    # if abs(board[king_square_idx]) != KING:
+    #    raise ValueError(
+    #        "Can't check for pin/check, piece is not a king",
+    #    )
 
     file, rank = cb.parse_index(king_square_idx)
 

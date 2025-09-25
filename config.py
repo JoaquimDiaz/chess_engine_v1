@@ -56,9 +56,18 @@ class Piece:
 
 
 @dataclass
+class Move:
+    piece: Piece
+    to_idx: int
+
+
+@dataclass
 class PieceMoves:
     pieces: list[Piece] = field(default_factory=list)
     move_list: list[list[int]] = field(default_factory=list)
+
+    def __bool__(self) -> bool:
+        return len(self.pieces) > 0
 
 
 @dataclass

@@ -755,8 +755,9 @@ def generate_single_check_no_pin_moves(
             moves = generate_king_legal_moves(
                 board, color, king_square, ennemy_controlled
             )
-            piece_moves.pieces.append(Piece(piece, idx))
-            piece_moves.move_list.append(moves)
+            if moves:
+                piece_moves.pieces.append(Piece(piece, idx))
+                piece_moves.move_list.append(moves)
             continue
 
         elif abs(piece) == PAWN:
@@ -797,8 +798,9 @@ def generate_single_check_pinned_moves(
             moves = generate_king_legal_moves(
                 board, color, king_square, ennemy_controlled
             )
-            piece_moves.pieces.append(Piece(piece, idx))
-            piece_moves.move_list.append(moves)
+            if moves:
+                piece_moves.pieces.append(Piece(piece, idx))
+                piece_moves.move_list.append(moves)
             continue
 
         elif abs(piece) == PAWN:
