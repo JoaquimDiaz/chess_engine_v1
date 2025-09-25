@@ -327,7 +327,7 @@ class BoardState:
 
     @classmethod
     def from_board(cls, board: list[int]) -> "BoardState":
-        piece_data = find_pieces(board)
+        piece_data = find_pieces(board, skip_validation=True)
         return cls(
             w_pieces=piece_data[0],
             w_idx=piece_data[1],

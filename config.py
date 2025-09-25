@@ -1,5 +1,9 @@
 from dataclasses import dataclass, field
 
+###########################
+# ------ CONSTANTS ------ #
+###########################
+
 EMPTY_SQUARE = 0
 PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING = 1, 2, 3, 4, 5, 6
 
@@ -40,13 +44,11 @@ FEN_CONVERSION = {
 
 BOARD_TO_FEN = {v: k for k, v in FEN_CONVERSION.items()}
 
-# Alias for BoardState type used in the `find_pieces` function
-# BoardState = tuple[list[int], list[int], list[int], list[int], int, int]
+###########################
+# ------ DATACLASS ------ #
+###########################
 
-# CastlingState = tuple[bool, bool, bool]
 
-
-# PieceMoves = tuple[list[tuple[int, int]], list[list[int]]] | None
 @dataclass
 class Piece:
     piece: int
@@ -103,6 +105,14 @@ class CastlingState:
         if self.black_queenside:
             fen += "q"
         return fen or "-"
+
+    def copy(self) -> "CastlingState":
+        return CastlingState(
+            white_kingside=self.white_kingside,
+            white_queenside=self.white_queenside,
+            black_kingside=self.black_kingside,
+            black_queenside=self.black_queenside,
+        )
 
     @classmethod
     def from_fen(cls, fen: str) -> "CastlingState":

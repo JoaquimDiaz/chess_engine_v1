@@ -7,21 +7,29 @@ from chess_board import (
     create_starting_position,
     index_to_square,
 )
+
+from evaluate_position import evaluate_position
+
 from config import (
     FEN_CONVERSION,
     BOARD_TO_FEN,
     EMPTY_SQUARE,
+    KING,
     BLACK,
+    PAWN,
     WHITE,
+    ROOK,
     CastlingState,
+    Piece,
+    PieceMoves,
 )
+from legal_moves import generate_legal_moves
 
 FEN_START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
-
-#################################
-# ------ GameState CLASS ------ #
-#################################
+# ===============================================================
+# GAMESTATE CLASS
+# ===============================================================
 
 
 class GameState:
@@ -41,12 +49,11 @@ class GameState:
         self.half_moves: int = half_moves
         self.full_moves: int = full_moves
 
-        # Derived state
         self.board_state: BoardState = BoardState.from_board(self.board)
 
     @override
     def __str__(self):
-        return f"""{{\
+        return f"""{{
         "board": {self.board},
         "active_color": {self.active_color},
         "castling_state": {self.castling_state},
@@ -55,8 +62,83 @@ class GameState:
         "full_moves": {self.full_moves}
     }}"""
 
-    def to_fen(self):
+    def copy(self) -> "GameState":
+        return GameState(
+            self.board.copy(),
+            self.active_color,
+            self.castling_state.copy(),
+            self.en_passant_target,
+            self.half_moves,
+            self.full_moves,
+        )
+
+    def to_fen(self) -> str:
         return game_state_to_fen(self)
+
+    @property
+    def legal_moves(self) -> PieceMoves:
+        return generate_legal_moves(
+            self.board,
+            self.active_color,
+            self.board_state,
+            self.castling_state,
+            self.en_passant_target,
+        )
+
+    # ---------------------------------------------------------------------
+    # MAKING A MOVE
+    # ---------------------------------------------------------------------
+
+    def make_move(self, piece: Piece, move: int) -> None:
+        self._update_half_moves(piece, move)
+        self._update_board(piece, move)
+        self._update_castling_state(piece)
+        self._update_en_passant_target(piece, move)
+
+        if self.active_color == BLACK:
+            self.full_moves += 1
+
+        self._update_board_state()
+
+        self.active_color = WHITE if self.active_color == BLACK else BLACK
+
+    def _update_board(self, piece: Piece, move: int) -> None:
+        self.board[piece.index] = EMPTY_SQUARE
+        self.board[move] = piece.piece
+
+    def _update_castling_state(self, piece: Piece) -> None:
+        if piece.piece == abs(KING):
+            self.castling_state.disable_all(self.active_color)
+        elif abs(piece.piece) == ROOK and piece.index in [7, 63]:
+            self.castling_state.disable_kingside(self.active_color)
+        elif abs(piece.piece) == ROOK and piece.index in [0, 56]:
+            self.castling_state.disable_queenside(self.active_color)
+
+    def _update_en_passant_target(self, piece: Piece, move: int):
+        if abs(piece.piece) == PAWN and abs(piece.index - move) == 16:
+            self.en_passant_target = (
+                piece.index + 8 if self.active_color == WHITE else piece.index - 8
+            )
+
+    def _update_half_moves(self, piece: Piece, move: int) -> None:
+        if abs(piece.piece) == PAWN or self.board[move] != EMPTY_SQUARE:
+            self.half_moves = 0
+        else:
+            self.half_moves += 1
+
+    def _update_board_state(self) -> None:
+        self.board_state = BoardState.from_board(self.board)
+
+    # ---------------------------------------------------------------------
+    # POSITION EVALUATION
+    # ---------------------------------------------------------------------
+
+    def evaluate(self) -> int:
+        return evaluate_position(self.board_state.w_pieces, self.board_state.b_pieces)
+
+    # ---------------------------------------------------------------------
+    # CLASS METHOD
+    # ---------------------------------------------------------------------
 
     @classmethod
     def starting_position(cls) -> "GameState":
@@ -93,9 +175,9 @@ class GameState:
         )
 
 
-###################################
-# ------ FEN PARSING UTILS ------ #
-###################################
+# ===============================================================
+# FEN PARSING UTILS
+# ===============================================================
 
 
 def parse_fen(fen: str):
