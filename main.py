@@ -12,6 +12,7 @@ from config import (
     WHITE,
     WHITE_KING,
     WHITE_PAWN,
+    WHITE_QUEEN,
     CastlingState,
     Piece,
     PieceMoves,
@@ -20,7 +21,9 @@ from config import (
 )
 from legal_moves import generate_legal_moves
 from game_state import GameState
-from move_selection import simple_selection, minmax_selection
+from move_selection import simple_selection, minmax_selection, min_max
+
+from benchmarks.profiler import profile_engine
 
 logger = logging.getLogger(__name__)
 
@@ -38,14 +41,21 @@ def find(p: int, game_state: GameState) -> None:
 
 
 def main():
-    g = GameState.from_fen(
-        "rnb1kbnr/pppp1ppp/8/4p3/2B1P2q/5QP1/PPPP1P1P/RNB1KN1R w KQkq - 0 1"
-    )
+    start()
 
-    print(g)
+
+def start():
+    g = GameState.from_fen("2r2kr1/R4p1p/4p3/1pqnPp2/5P2/Q7/P3N1PP/1R5K w - - 1 2")
     g.display()
-    p = minmax_selection(g, 4)
+    p = minmax_selection(g, 5)
     print(p)
+
+
+def profile():
+    fen = "2r2kr1/R4p1p/4p3/1pqnPp2/5P2/Q7/P3N1PP/1R5K w - - 1 2"
+    move = profile_engine(fen, 3)
+
+    print(move)
 
 
 if __name__ == "__main__":

@@ -13,7 +13,7 @@ def evaluate_position(
     if draw:
         return 0
     elif checkmate:
-        return -1000 if active_color == WHITE else +1000
+        return -10_000 if active_color == WHITE else +10_000
     else:
         w_score: int = 0
         b_score: int = 0

@@ -44,6 +44,9 @@ class GameState:
         active_color: int,
         castling_state: CastlingState,
         en_passant_target: int | None = None,
+        checking_pieces: list[Piece] | None = None,
+        pinned_pieces: list[PinnedPiece] | None = None,
+        legal_moves: PieceMoves | None = None,
         half_moves: int = 0,
         full_moves: int = 1,
     ):
@@ -53,11 +56,16 @@ class GameState:
         self.en_passant_target: int | None = en_passant_target
         self.half_moves: int = half_moves
         self.full_moves: int = full_moves
+        self.checking_pieces: list[Piece] | None = checking_pieces
+        self.pinned_pieces: list[PinnedPiece] | None = pinned_pieces
+        self.legal_moves: PieceMoves | None = legal_moves
 
         self.board_state: BoardState = BoardState.from_board(self.board)
 
-        self._update_king_safety()
-        self._update_legal_moves()
+        if self.checking_pieces is None:
+            self._update_king_safety()
+        if self.legal_moves is None:
+            self._update_legal_moves()
         self._update_endgame_state()
 
     @override
@@ -67,6 +75,8 @@ class GameState:
         "active_color": {"WHITE" if self.active_color == WHITE else "BLACK"},
         "castling_state": {self.castling_state},
         "en_passant_target": {self.en_passant_target},
+        "checking_pieces": {self.checking_pieces},
+        "pinned_pieces": {self.pinned_pieces},
         "half_moves": {self.half_moves},
         "full_moves": {self.full_moves},
         "checkmate": {self.checkmate},
@@ -82,24 +92,15 @@ class GameState:
             self.active_color,
             self.castling_state.copy(),
             self.en_passant_target,
+            self.checking_pieces,
+            self.pinned_pieces,
+            self.legal_moves,
             self.half_moves,
             self.full_moves,
         )
 
     def to_fen(self) -> str:
         return game_state_to_fen(self)
-
-    # @property
-    # def legal_moves(self) -> PieceMoves:
-    #    return generate_legal_moves(
-    #        self.board,
-    #        self.active_color,
-    #        self.board_state,
-    #        self.checking_pieces,
-    #        self.pinned_pieces,
-    #        self.castling_state,
-    #        self.en_passant_target,
-    #    )
 
     # ---------------------------------------------------------------------
     # MAKING A MOVE
@@ -203,11 +204,13 @@ class GameState:
 
         safety = analyze_king_safety(self.board, active_king_idx, self.active_color)
 
-        self.checking_pieces: list[Piece] = safety[0]
-        self.pinned_pieces: list[PinnedPiece] = safety[1]
+        self.checking_pieces = safety[0]
+        self.pinned_pieces = safety[1]
 
     def _update_legal_moves(self):
-        self.legal_moves: PieceMoves = generate_legal_moves(
+        assert self.checking_pieces is not None
+        assert self.pinned_pieces is not None
+        self.legal_moves = generate_legal_moves(
             self.board,
             self.active_color,
             self.board_state,

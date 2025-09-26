@@ -60,6 +60,9 @@ class Move:
     piece: Piece
     to_idx: int
 
+    def __iter__(self):
+        return self.piece, self.to_idx
+
 
 @dataclass
 class PieceMoves:

@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from time import time
 from config import (
     Move,
     Piece,
@@ -53,11 +54,16 @@ def simple_selection(
                     best_move = (piece, square, None)
                     best_eval = eval
 
-    return best_move
-    # return best_move  # pyright: ignore[reportPossiblyUnboundVariable]
+    return best_move  # pyright: ignore[reportPossiblyUnboundVariable]
 
 
-def min_max(game_state: GameState, depth: int, maximazing: bool) -> float:
+def min_max(
+    game_state: GameState,
+    depth: int,
+    maximazing: bool,
+    alpha: float = -5000,
+    beta: float = 5000,
+) -> float:
     promotion_rank = (
         [i for i in range(56, 64, 1)]
         if game_state.active_color == WHITE
@@ -75,14 +81,19 @@ def min_max(game_state: GameState, depth: int, maximazing: bool) -> float:
                     for promotion in PROMOTION_LIST:
                         g = game_state.copy()
                         g.make_move(piece, idx, promotion)
-                        eval = min_max(g, depth - 1, False)
+                        eval = min_max(g, depth - 1, False, alpha, beta)
                         best_eval = max(best_eval, eval)
-
+                        alpha = max(alpha, eval)
+                        if beta <= alpha:
+                            return best_eval
                 else:
                     g = game_state.copy()
                     g.make_move(piece, idx)
-                    eval = min_max(g, depth - 1, False)
+                    eval = min_max(g, depth - 1, False, alpha, beta)
                     best_eval = max(best_eval, eval)
+                    alpha = max(alpha, eval)
+                    if beta <= alpha:
+                        return best_eval
         return best_eval
     else:
         best_eval = float("+inf")
@@ -94,17 +105,24 @@ def min_max(game_state: GameState, depth: int, maximazing: bool) -> float:
                     for promotion in PROMOTION_LIST:
                         g = game_state.copy()
                         g.make_move(piece, idx, promotion)
-                        eval = min_max(g, depth - 1, True)
+                        eval = min_max(g, depth - 1, True, alpha, beta)
                         best_eval = min(best_eval, eval)
+                        beta = min(beta, eval)
+                        if beta <= alpha:
+                            return best_eval
                 else:
                     g = game_state.copy()
                     g.make_move(piece, idx)
-                    eval = min_max(g, depth - 1, True)
+                    eval = min_max(g, depth - 1, True, alpha, beta)
                     best_eval = min(best_eval, eval)
+                    beta = min(beta, eval)
+                    if beta <= alpha:
+                        return best_eval
         return best_eval
 
 
 def minmax_selection(game_state: GameState, depth: int = 3) -> Move:
+    start = time()
     piece_list = game_state.legal_moves.pieces
     moves_list = game_state.legal_moves.move_list
 
@@ -118,14 +136,14 @@ def minmax_selection(game_state: GameState, depth: int = 3) -> Move:
                     for promotion in PROMOTION_LIST:
                         g = game_state.copy()
                         g.make_move(piece, square, promotion)
-                        eval = min_max(g, depth, True)
+                        eval = min_max(g, depth, False)
                         if eval > best_eval:
                             best_eval = eval
                             best_move = Move(piece, square)
                 else:
                     g = game_state.copy()
                     g.make_move(piece, square)
-                    eval = min_max(g, depth, True)
+                    eval = min_max(g, depth, False)
                     if eval > best_eval:
                         best_eval = eval
                         best_move = Move(piece, square)
@@ -139,16 +157,20 @@ def minmax_selection(game_state: GameState, depth: int = 3) -> Move:
                     for promotion in PROMOTION_LIST:
                         g = game_state.copy()
                         g.make_move(piece, square, promotion)
-                        eval = min_max(g, depth, False)
+                        eval = min_max(g, depth, True)
                         if eval < best_eval:
                             best_eval = eval
                             best_move = Move(piece, square)
                 else:
                     g = game_state.copy()
                     g.make_move(piece, square)
-                    eval = min_max(g, depth, False)
+                    eval = min_max(g, depth, True)
                     if eval < best_eval:
                         best_eval = eval
                         best_move = Move(piece, square)
+
+    end = time()
+    duration = end - start
+    print(f"duration: {duration}")
 
     return best_move
