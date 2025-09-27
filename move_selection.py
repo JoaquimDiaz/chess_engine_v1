@@ -71,6 +71,7 @@ def min_max(
     )
     if depth == 0 or game_state.draw or game_state.checkmate:
         return game_state.evaluate()
+    assert game_state.legal_moves is not None
     if maximazing:
         best_eval = float("-inf")
         for piece, moves in zip(
@@ -122,7 +123,7 @@ def min_max(
 
 
 def minmax_selection(game_state: GameState, depth: int = 3) -> Move:
-    start = time()
+    assert game_state.legal_moves is not None
     piece_list = game_state.legal_moves.pieces
     moves_list = game_state.legal_moves.move_list
 
@@ -168,9 +169,5 @@ def minmax_selection(game_state: GameState, depth: int = 3) -> Move:
                     if eval < best_eval:
                         best_eval = eval
                         best_move = Move(piece, square)
-
-    end = time()
-    duration = end - start
-    print(f"duration: {duration}")
 
     return best_move
